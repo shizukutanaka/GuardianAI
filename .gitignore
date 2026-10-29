@@ -26,4 +26,3 @@ config/
 skill/
 
 # Ignore Python bytecode
-src/guardian_ai/__pycache__/*
