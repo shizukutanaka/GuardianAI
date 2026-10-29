@@ -15,6 +15,8 @@ class LocalSearch:
         results = []
         for ext in pattern.split(','):
             ext = ext.strip()
+            if ext.startswith('*.'):
+                ext = ext[2:]  # Remove '*'
             if ext:
                 for root, dirs, files in os.walk(self.root_path):
                     for file in files:
@@ -34,7 +36,7 @@ class LocalSearch:
             results.append({"file": file, "error": str(e)})
         return results
     
-    def search_all(self, pattern: str) -> Dict[str, Any]:
+    def search_all(self, pattern: str) -> Dict[str, List[tuple]]:
         """複数ファイル同時検索"""
         files = self.search_files('*.py,*.json,*.yaml,*.txt,*.md')
         results = {}
