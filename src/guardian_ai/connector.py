@@ -19,8 +19,9 @@ class AgentConnector:
         """すべての Agent を並列で実行"""
         tasks = []
         for agent in self.agents:
-            task = self._run_agent(agent, request)
-            tasks.append(task)
+            def run(a, req):
+                return a['router'].analyze(req)
+            tasks.append(run(agent, request))
         
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
@@ -32,11 +33,6 @@ class AgentConnector:
                 output[agent['name']] = result
         
         return output
-    
-    def _run_agent(self, agent: dict, request: str) -> Dict:
-        """単一 Agent を実行"""
-        router = agent['router']
-        return router.analyze(request)
     
     def run_sequential(self, request: str) -> Dict[str, Dict]:
         """順次実行"""
