@@ -17,11 +17,10 @@ class AgentConnector:
     
     async def run_parallel(self, request: str) -> Dict[str, Dict]:
         """すべての Agent を並列で実行"""
-        tasks = []
-        for agent in self.agents:
-            def run(a, req):
-                return a['router'].analyze(req)
-            tasks.append(run(agent, request))
+        tasks = [
+            lambda a, req: a['router'].analyze(req)(a)
+            for a, req in zip(self.agents, [request] * len(self.agents))
+        ]
         
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
