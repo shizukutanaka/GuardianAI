@@ -1,5 +1,7 @@
 
-"""Guardian AI - Privacy-First Enterprise Agent Platform"""
+"""Shield AI - Privacy-First Enterprise Agent Platform"""
+# No internet access, no search functionality
+# Zero Trust, Privacy by Design
 import sys
 from pathlib import Path
 
@@ -18,7 +20,7 @@ def main():
         result = router.analyze(request)
         print(f"  {agent_name}: {result['agent']}/{result['model']}")
         
-    print("\\nAll agents initialized successfully!")
+    print("\nAll agents initialized successfully!")
 
 if __name__ == "__main__":
     main()
