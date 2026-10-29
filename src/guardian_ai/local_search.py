@@ -1,0 +1,37 @@
+
+"""Local Search: ファイル内検索機能（インターネットなし）"""
+import os
+from pathlib import Path
+
+class LocalSearch:
+    """ローカルファイル検索 - 外部通信なし"""
+    
+    def __init__(self, root_path: str):
+        self.root_path = Path(root_path)
+    
+    def search_files(self, pattern: str) -> list:
+        """拡張子でファイルを検索"""
+        results = []
+        for ext in pattern.split(','):
+            ext = ext.strip()
+            if ext:
+                for root, dirs, files in os.walk(self.root_path):
+                    for file in files:
+                        if file.endswith(ext):
+                            results.append(os.path.join(root, file))
+        return results
+    
+    def search_text(self, pattern: str, file: str, encoding: str = "utf-8") -> list:
+        """ファイル内テキスト検索"""
+        results = []
+        try:
+            with open(file, encoding=encoding) as f:
+                content = f.read()
+                matches = [m.start() for m in __import__('re').finditer(pattern, content)]
+                results.append({"file": file, "matches": matches})
+        except Exception as e:
+            results.append({"file": file, "error": str(e)})
+        return results
+
+# クラスをモジュールレベルに公開
+__all__ = ["LocalSearch"]
