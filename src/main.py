@@ -10,7 +10,7 @@ from guardian_ai.connector import AgentConnector
 
 def main():
     router = Router()
-    connector = AgentConnector()
+    connector = AgentConnector([router])
     
     # 基本テスト
     for agent_name in ["accounting", "legal", "general"]:
@@ -18,7 +18,7 @@ def main():
         result = router.analyze(request)
         print(f"  {agent_name}: {result['agent']}/{result['model']}")
         
-    print("\nAll agents initialized successfully!")
+    print("\\nAll agents initialized successfully!")
 
 if __name__ == "__main__":
     main()
