@@ -1,0 +1,19 @@
+model_selector:
+  # Model switching strategy based on task complexity
+  strategy: "auto"  # auto, manual, fixed
+  
+  # Model mapping
+  models:
+    simple:
+      - "llama3:8b"
+      - "mistral:7b"
+    medium:
+      - "llama3:8b"
+    complex:
+      - "llama3:70b"
+      - "qwen2:72b"
+
+  # Performance tuning
+  max_concurrent: 3
+  timeout_s: 120
+  fallback_model: "llama3:8b"
