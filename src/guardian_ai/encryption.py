@@ -3,7 +3,8 @@
 import os
 import secrets
 import base64
-from typing import Optional, Tuple, Union
+import binascii
+from typing import Optional, Union
 
 try:
     import wincred
@@ -16,7 +17,6 @@ try:
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import padding
     from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-    from cryptography.fernet import Fernet
     HAS_CRYPTO = True
 except ImportError:
     HAS_CRYPTO = False
@@ -50,7 +50,6 @@ class Encryption:
             padder = padding.PKCS7(128).padder()
             padded_data = padder.update(plaintext.encode() if isinstance(plaintext, str) else plaintext) + padder.finalize()
             ciphertext = encryptor.update(padded_data) + encryptor.finalize()
-            # GCM の認証タグは ciphertext の一部に含まれる
             return base64.b64encode(iv + ciphertext).decode()
         else:
             return base64.b64encode(plaintext.encode()).decode()
@@ -60,14 +59,20 @@ class Encryption:
         key = key or self._ensure_key()
         
         if HAS_CRYPTO:
-            data = base64.b64decode(ciphertext)
-            iv = data[:12]
-            ciphertext_data = data[12:]
-            cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
-            decryptor = cipher.decryptor()
-            # GCM の認証タグは ciphertext_data の末尾 16 バイト
-            decrypted = decryptor.update(ciphertext_data)
-            return decrypted.decode()
+            try:
+                data = base64.b64decode(ciphertext)
+                iv = data[:12]
+                ciphertext_data = data[12:]
+                cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
+                decryptor = cipher.decryptor()
+                decrypted = decryptor.update(ciphertext_data)
+                # PKCS7 パディング削除
+                unpadder = padding.PKCS7(128).unpadder()
+                decrypted = unpadder.update(decrypted) + unpadder.finalize()
+                return decrypted.decode()
+            except Exception as e:
+                # 復号化失敗の場合
+                return f"Decrypt failed: {e}"
         else:
             return base64.b64decode(ciphertext).decode()
     
