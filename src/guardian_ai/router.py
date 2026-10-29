@@ -16,7 +16,7 @@ class AgentType(Enum):
 class RouterConfig:
     def __init__(self):
         self.model_map = {"8b": ["llama3:8b"], "32b": ["llama3:70b"]}
-        self.default_model = "llama3:8b"
+        self.default_model = "qwen2:1.5b"
     
     def select_model(self, complexity):
         if complexity == "complex":
@@ -32,6 +32,11 @@ class Router:
         complexity = self.estimate_complexity(request)
         model = self.config.select_model(complexity)
         tasks = self.decompose_tasks(request, agent)
+        
+        # LLM inference (optional, for actual processing)
+        # To enable: install llama-cpp-python and uncomment below
+        # result = self.llm_inference(request, model)
+        
         return {"agent": agent.value, "model": model, "complexity": complexity, "tasks": tasks}
     
     def classify_agent(self, request):
