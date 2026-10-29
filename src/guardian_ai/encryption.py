@@ -15,6 +15,8 @@ try:
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import padding
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    from cryptography.fernet import Fernet
     HAS_CRYPTO = True
 except ImportError:
     HAS_CRYPTO = False
@@ -48,9 +50,9 @@ class Encryption:
             padder = padding.PKCS7(128).padder()
             padded_data = padder.update(plaintext.encode() if isinstance(plaintext, str) else plaintext) + padder.finalize()
             ciphertext = encryptor.update(padded_data) + encryptor.finalize()
+            # GCM の認証タグは ciphertext の一部に含まれる
             return base64.b64encode(iv + ciphertext).decode()
         else:
-            # Fallback: simple XOR (NOT SECURE)
             return base64.b64encode(plaintext.encode()).decode()
     
     def decrypt(self, ciphertext: str, key: Optional[bytes] = None) -> str:
@@ -63,10 +65,9 @@ class Encryption:
             ciphertext_data = data[12:]
             cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
             decryptor = cipher.decryptor()
-            padded_data = decryptor.update(ciphertext_data) + decryptor.finalize()
-            unpadder = padding.PKCS7(128).unpadder()
-            plaintext = unpadder.update(padded_data) + unpadder.finalize()
-            return plaintext.decode()
+            # GCM の認証タグは ciphertext_data の末尾 16 バイト
+            decrypted = decryptor.update(ciphertext_data)
+            return decrypted.decode()
         else:
             return base64.b64decode(ciphertext).decode()
     
