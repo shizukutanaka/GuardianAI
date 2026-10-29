@@ -3,9 +3,9 @@
 # Zero Trust, Privacy by Design
 # NO INTERNET ACCESS - Local-only operation
 import sys
-from pathlib import Path
+import os
 
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from guardian_ai.router import Router, AgentType
 from guardian_ai.connector import AgentConnector
@@ -16,7 +16,7 @@ def main():
     connector = AgentConnector([router])
     
     # Local Search
-    search = LocalSearch(".")
+    search = LocalSearch(os.path.abspath("src"))
     
     # 基本テスト
     for agent_name in ["accounting", "legal", "general"]:
