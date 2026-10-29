@@ -6,12 +6,6 @@ import base64
 from typing import Optional, Tuple, Union
 
 try:
-    import cryptography
-    HAS_CRYPTO = True
-except ImportError:
-    HAS_CRYPTO = False
-
-try:
     import wincred
     HAS_WINCRED = True
 except ImportError:
@@ -33,14 +27,19 @@ class Encryption:
         self.key: Optional[bytes] = None
         self.initialized = False
     
+    def _ensure_key(self) -> bytes:
+        """キーが存在しない場合生成"""
+        if self.key is None:
+            self.key = self.generate_key()
+        return self.key
+    
     def generate_key(self) -> bytes:
         """32 バイトの AES256 キー生成"""
         return secrets.token_bytes(32)
     
     def encrypt(self, plaintext: Union[str, bytes], key: Optional[bytes] = None) -> str:
         """AES256-GCM 暗号化"""
-        if key is None:
-            key = self.key or self.generate_key()
+        key = key or self._ensure_key()
         
         if HAS_CRYPTO:
             iv = secrets.token_bytes(12)
@@ -56,16 +55,15 @@ class Encryption:
     
     def decrypt(self, ciphertext: str, key: Optional[bytes] = None) -> str:
         """AES256-GCM 復号化"""
-        if key is None:
-            key = self.key or self.generate_key()
+        key = key or self._ensure_key()
         
         if HAS_CRYPTO:
             data = base64.b64decode(ciphertext)
             iv = data[:12]
-            ciphertext = data[12:]
+            ciphertext_data = data[12:]
             cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
             decryptor = cipher.decryptor()
-            padded_data = decryptor.update(ciphertext) + decryptor.finalize()
+            padded_data = decryptor.update(ciphertext_data) + decryptor.finalize()
             unpadder = padding.PKCS7(128).unpadder()
             plaintext = unpadder.update(padded_data) + unpadder.finalize()
             return plaintext.decode()
@@ -77,7 +75,6 @@ class Encryption:
         if HAS_WINCRED:
             cred = wincred.CredentialManager()
             cred.Get(service_name)
-            # キーは Credential Manager に保存される
             return self.key or self.generate_key()
         return self.key or self.generate_key()
 
