@@ -1,7 +1,11 @@
-"""Agent Connector: 複数 Agent を接続・並列実行"""
 
+"""Agent Connector: 複数 Agent を接続・並列実行"""
 import asyncio
-from typing import List, Dict
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from typing import List, Dict, Any
 from guardian_ai.router import Router, AgentType
 
 class AgentConnector:
@@ -11,18 +15,35 @@ class AgentConnector:
         """agents: [{'name': 'accounting', 'router': Router}, ...]"""
         self.agents = agents
     
-    def run_parallel(self, request: str) -> Dict[str, Dict]:
+    async def run_parallel(self, request: str) -> Dict[str, Dict]:
         """すべての Agent を並列で実行"""
+        tasks = []
+        for agent in self.agents:
+            task = self._run_agent(agent, request)
+            tasks.append(task)
+        
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        output = {}
+        for i, (agent, result) in enumerate(zip(self.agents, results)):
+            if isinstance(result, Exception):
+                output[agent['name']] = {"error": str(result)}
+            else:
+                output[agent['name']] = result
+        
+        return output
+    
+    def _run_agent(self, agent: dict, request: str) -> Dict:
+        """単一 Agent を実行"""
+        router = agent['router']
+        return router.analyze(request)
+    
+    def run_sequential(self, request: str) -> Dict[str, Dict]:
+        """順次実行"""
         results = {}
         for agent in self.agents:
-            result = agent["router"].analyze(request)
-            results[agent["name"]] = result
-        
+            results[agent['name']] = agent['router'].analyze(request)
         return results
 
-# 例：複数 Agent を定義
-agents_config = [
-    {"name": "accounting", "router": Router()},
-    {"name": "legal", "router": Router()},
-    {"name": "general", "router": Router()},
-]
+# クラスをモジュールレベルに公開
+__all__ = ["AgentConnector"]
