@@ -1,6 +1,5 @@
 
 """Agent Connector: 複数 Agent を接続・並列実行"""
-import asyncio
 import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -15,23 +14,12 @@ class AgentConnector:
         """agents: [{'name': 'accounting', 'router': Router}, ...]"""
         self.agents = agents
     
-    async def run_parallel(self, request: str) -> Dict[str, Dict]:
+    def run_parallel(self, request: str) -> Dict[str, Dict]:
         """すべての Agent を並列で実行"""
-        tasks = [
-            lambda a, req: a['router'].analyze(req)(a)
-            for a, req in zip(self.agents, [request] * len(self.agents))
-        ]
-        
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        output = {}
-        for i, (agent, result) in enumerate(zip(self.agents, results)):
-            if isinstance(result, Exception):
-                output[agent['name']] = {"error": str(result)}
-            else:
-                output[agent['name']] = result
-        
-        return output
+        results = {}
+        for i, agent in enumerate(self.agents):
+            results[agent['name']] = agent['router'].analyze(request)
+        return results
     
     def run_sequential(self, request: str) -> Dict[str, Dict]:
         """順次実行"""
