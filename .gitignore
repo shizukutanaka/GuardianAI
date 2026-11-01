@@ -26,5 +26,3 @@ config/
 skill/
 
 # Ignore Python bytecode
-# Documentation
-README.md
