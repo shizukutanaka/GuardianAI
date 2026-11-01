@@ -1,0 +1,1 @@
+def test_search_python(): from guardian_ai.local_search import LocalSearch; s = LocalSearch('.'); assert len(s.search_files('*.py')) > 0

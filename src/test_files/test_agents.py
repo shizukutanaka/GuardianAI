@@ -1,0 +1,1 @@
+def test_agents_list(): from guardian_ai.router import Router; r = Router(); assert 'agent' in r.analyze('test').keys()

@@ -1,0 +1,1 @@
+def test_encrypt(): from guardian_ai.encryption import Encryption; e = Encryption(); assert e.decrypt(e.encrypt('Hello')) == 'Hello'

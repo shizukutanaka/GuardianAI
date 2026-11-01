@@ -1,0 +1,1 @@
+def test_classify_python(): from guardian_ai.router import Router; r = Router(); assert r.analyze('Generate Python report')['agent'].startswith('GENERAL')
