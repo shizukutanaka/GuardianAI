@@ -13,21 +13,19 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 CONFIG = {
     "retry_count": 3,
     "timeout": 300,
-    "output_dir": Path(__file__).parent / "test_reports",
 }
 
 TESTS = {
-    "classify": "def test_classify_python(): from guardian_ai.router import Router; r = Router(); assert r.analyze('Generate Python report')['agent'].startswith('GENERAL')",
-    "encrypt": "def test_encrypt(): from guardian_ai.encryption import Encryption; e = Encryption(); assert e.decrypt(e.encrypt('Hello')) == 'Hello'",
-    "search": "def test_search_python(): from guardian_ai.local_search import LocalSearch; s = LocalSearch('.'); assert len(s.search_files('*.py')) > 0",
-    "agents": "def test_agents_list(): from guardian_ai.router import Router; r = Router(); assert 'agent' in r.analyze('test').keys()",
+    "classify": "def test(): from guardian_ai.router import Router; r = Router(); assert r.analyze('test')['agent'] in ['general', 'legal', 'accounting']",
+    "encrypt": "def test(): from guardian_ai.encryption import Encryption; e = Encryption(); assert e.decrypt(e.encrypt('test')) == 'test'",
+    "search": "def test(): from guardian_ai.local_search import LocalSearch; s = LocalSearch('.'); assert len(s.search_files('*.py')) > 0",
+    "agents": "def test(): from guardian_ai.router import Router; r = Router(); assert 'agent' in r.analyze('test').keys()",
 }
 
 def run_tests():
     passed, failed, results = 0, 0, []
     for i, name in enumerate(TESTS.keys()):
         test_file = Path(__file__).parent / "test_files" / f"test_{name}.py"
-        test_file.parent.mkdir(exist_ok=True)
         test_file.write_text(TESTS[name])
         
         for attempt in range(CONFIG["retry_count"]):

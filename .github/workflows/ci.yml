@@ -1,43 +1,19 @@
-name: CI / Security Scan
+name: CI / Security
 
 on:
   push:
     branches: [ main, master ]
-    paths:
-      - '.github/workflows/*.yml'
-      - 'src/**/*.py'
   pull_request:
     branches: [ main, master ]
 
-env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  GITHUB_OWNER: your-org
-  GITHUB_REPO: shieldai
-
 jobs:
-  security-scan:
+  security:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-      
-      - name: Security audit with bandit
-        run: |
-          pip install bandit
-          bandit -r src/ -ll
-      
-      - name: Run tests
-        run: |
-          python src/test_auto.py --all
-      
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          name: security-audit
-          path: src/
+          python-version: '3.11'
+      - run: pip install bandit
+      - run: bandit -r src/ -ll
+      - run: python src/test_auto.py --all
