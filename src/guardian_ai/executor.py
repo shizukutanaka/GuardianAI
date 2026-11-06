@@ -26,6 +26,11 @@ MAX_EXCERPTS = 5
 EXCERPT_LEN = 160
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[。！？!?\n])")
+# Personal-identifier field markers that make a medical request PHI:
+# reliable, deterministic, unlike a small-model detection pass.
+_PHI_FIELDS = re.compile(
+    r"氏名|患者名|患者[:：]|住所[:：]|生年月日|電話番号|カルテ番号|"
+    r"受診者[:：]|本人[:：]|マイナンバー")
 _DATE_RE = re.compile(r"(?:20\d{2}|令和\d+)\s*[年/-]\s*\d{1,2}\s*月?\s*\d{0,2}\s*日?|\d{4}-\d{2}-\d{2}")
 _MONEY_RE = re.compile(r"[¥￥$]\s*[\d,]+|[\d,]+\s*円|\d+(?:\.\d+)?\s*%")
 
@@ -294,6 +299,13 @@ class Executor:
         #             guardrail (mask, not block) and honours the principle
         #             literally rather than just refusing the request.
         phi_hits = scan_sensitive(corpus)
+        # Context-dependent Japanese PII (names, addresses) is invisible to
+        # regex and a ~1b model's detection is unreliable (measured: it
+        # answered "いいえ" for a named patient). Instead of a flaky LLM
+        # pass, block on deterministic personal-identifier FIELD markers -
+        # high precision, zero latency. Medical only.
+        if agent == "medical" and not phi_hits and _PHI_FIELDS.search(corpus):
+            phi_hits = ["personal_identifier_fields"]
         if phi_hits and agent == "medical":
             return {
                 "status": "blocked",
