@@ -34,6 +34,7 @@ HELP = """Commands:
   status        show audit integrity and queue stats
   export        write the newest 100 audit entries to an encrypted .enc file
   decrypt FILE  decrypt an .enc export with the local KMS key
+  verify        re-run the HMAC audit-chain check explicitly
   help          show this message
   quit          exit
 """
@@ -123,6 +124,15 @@ def main() -> None:
                 continue
             if cmd == "status":
                 show_status(conn, executor)
+                continue
+            if cmd == "verify":
+                v = verify_audit_chain(conn)
+                if v["ok"]:
+                    print(f"chain ok: {v['entries']} entries verified "
+                          "(HMAC + append-only + chain_state)")
+                else:
+                    print(f"chain BROKEN at #{v['broken_at']}: "
+                          f"{v.get('reason','')}")
                 continue
             if cmd == "export":
                 try:
