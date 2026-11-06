@@ -124,9 +124,15 @@ UNKNOWN_RULES = [
     (("contract", "契約書"), "The revision of the valid contract document"),
     # Agent-specific unknowns so medical/hr/accounting requests get a
     # verifiable check instead of the generic "Definition of done" fallback.
-    (("症状", "処方", "カルテ", "medical", "診断"), "Dosage and unit basis (whether amounts are in mg/ml/etc)"),
-    (("履歴書", "スキル", "採用", "経験"), "Evidence for claimed experience (whether it is backed by a record)"),
-    (("決算", "仕訳", "会計", "勘定"), "Applicable accounting standard and closing period"),
+    (("症状", "処方", "カルテ", "medical", "診断", "病历", "诊断", "处方",
+      "환자", "진단", "처방", "patient", "diagnosis", "prescription",
+      "symptom"), "Dosage and unit basis (whether amounts are in mg/ml/etc)"),
+    (("履歴書", "スキル", "採用", "経験", "简历", "面试", "招聘",
+      "이력서", "채용", "면접", "resume", "interview", "hiring",
+      "candidate"), "Evidence for claimed experience (whether it is backed by a record)"),
+    (("決算", "仕訳", "会計", "勘定", "决算", "会计", "报销",
+      "결산", "회계", "account", "ledger", "invoice",
+      "expense"), "Applicable accounting standard and closing period"),
 ]
 
 

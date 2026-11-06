@@ -30,7 +30,7 @@ _SENSITIVE_PATTERNS = [
         r"xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{20,})\b")),
     ("bearer_token", re.compile(r"bearer\s+[A-Za-z0-9._-]{10,}", re.I)),
     ("password", re.compile(
-        r"(?:password|passwd|pwd|secret|パスワード)\s*[:=：]\s*[^\s,;。]{4,}", re.I)),
+        r"(?:password|passwd|pwd|secret|パスワード|密码|비밀번호)\s*[:=：]\s*[^\s,;。]{4,}", re.I)),
     ("jwt", re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}\b")),
     ("credit_card", re.compile(r"\b(?:\d[ -]?){13,19}\b")),
     # JP My Number (12 digits) - distinct from phone (10-11) and CC (13-19)

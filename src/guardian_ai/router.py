@@ -57,13 +57,35 @@ class Router:
         return {"agent": agent.value, "model": model, "complexity": complexity,
                 "tasks": tasks, "thinking": thinking}
 
+    # Multilingual keywords (ja + en + zh + ko). Only distinctive tokens are
+    # used - substring matching means a short Latin word could false-match
+    # inside an unrelated word, so English entries stay >=4 chars and
+    # domain-specific.
     _AGENT_KEYWORDS = (
-        (AgentType.ACCOUNTING, ("決算", "仕訳", "会計", "経費", "請求", "税金")),
-        (AgentType.LEGAL, ("契約書", "法律", "リスク", "訴訟", "規約", "契約")),
-        (AgentType.HR, ("履歴書", "人事", "採用", "面接", "職歴")),
-        (AgentType.IT, ("サーバー", "ログ", "障害", "ネットワーク", "インフラ", "エラー")),
-        (AgentType.DEVELOPER, ("git", "コード", "バグ", "テスト", "レビュー", "デバッグ", "実装")),
-        (AgentType.MEDICAL, ("カルテ", "医療", "診断", "患者", "処方")),
+        (AgentType.ACCOUNTING, (
+            "決算", "仕訳", "会計", "経費", "請求", "税金",
+            "account", "ledger", "invoice", "expense", "tax ", "audit ",
+            "决算", "会计", "报销", "发票", "결산", "회계", "세금")),
+        (AgentType.LEGAL, (
+            "契約書", "法律", "リスク", "訴訟", "規約", "契約",
+            "contract", "legal", "lawsuit", "liability", "clause",
+            "合同", "契约", "法律", "诉讼", "계약", "법률", "소송")),
+        (AgentType.HR, (
+            "履歴書", "人事", "採用", "面接", "職歴",
+            "resume", "interview", "hiring", "recruit", "candidate",
+            "简历", "面试", "招聘", "이력서", "채용", "면접")),
+        (AgentType.IT, (
+            "サーバー", "ログ", "障害", "ネットワーク", "インフラ", "エラー",
+            "server", "network", "outage", "error", "latency", "deploy",
+            "服务器", "故障", "网络", "서버", "장애", "네트워크")),
+        (AgentType.DEVELOPER, (
+            "git", "コード", "バグ", "テスト", "レビュー", "デバッグ", "実装",
+            "code", "debug", "review", "commit", "repository",
+            "代码", "调试", "测试", "코드", "디버그", "테스트")),
+        (AgentType.MEDICAL, (
+            "カルテ", "医療", "診断", "患者", "処方",
+            "patient", "diagnosis", "prescription", "symptom", "clinical",
+            "病历", "诊断", "处方", "患者", "환자", "진단", "처방")),
     )
 
     def classify_agent(self, request):

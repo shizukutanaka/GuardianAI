@@ -30,7 +30,12 @@ _SENTENCE_SPLIT = re.compile(r"(?<=[。！？!?\n])")
 # reliable, deterministic, unlike a small-model detection pass.
 _PHI_FIELDS = re.compile(
     r"氏名|患者名|患者[:：]|住所[:：]|生年月日|電話番号|カルテ番号|"
-    r"受診者[:：]|本人[:：]|マイナンバー")
+    r"受診者[:：]|本人[:：]|マイナンバー|"
+    # multilingual patient-identifier markers (zh + ko + en)
+    r"姓名|患者名|身份证号|住址|出生日期|电话号码|病历号|"
+    r"환자명|주민등록번호|주소|생년월일|전화번호|차트번호|"
+    r"patient\s+name|ssn\b|date\s+of\s+birth|mrn\b|"
+    r"address[:：]|phone\s+number", re.I)
 _DATE_RE = re.compile(r"(?:20\d{2}|令和\d+)\s*[年/-]\s*\d{1,2}\s*月?\s*\d{0,2}\s*日?|\d{4}-\d{2}-\d{2}")
 _MONEY_RE = re.compile(r"[¥￥$]\s*[\d,]+|[\d,]+\s*円|\d+(?:\.\d+)?\s*%")
 
