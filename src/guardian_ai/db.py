@@ -250,6 +250,12 @@ def verify_audit_chain(conn: sqlite3.Connection) -> dict:
     state = conn.execute(
         "SELECT row_count, head, state_hmac FROM chain_state "
         "WHERE id = 1").fetchone()
+    # Missing chain_state with rows present IS tampering - init always
+    # creates it, so its absence means the attacker deleted it to evade
+    # the tail-deletion check below.
+    if not state and rows:
+        return {"ok": False, "broken_at": None,
+                "reason": "chain_state missing - possible tamper"}
     if state:
         scount, shead, shmac = state
         if shmac != _state_hmac(scount, shead):
