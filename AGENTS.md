@@ -18,9 +18,10 @@ Ollama synthesis (labelled "未検証") -> redact -> sha256 audit chain.
   `SHIELDAI_DATA_DIR=D:\shieldai-data` (setx'd) holds DB + KMS keys.
 - Ollama is a portable install at `D:\ollama`; start with
   `start-ollama.cmd` (sets OLLAMA_MODELS + KEEP_ALIVE=24h).
-- GPU: RTX A2000 12GB; inference ~6s. Model: qwen2.5:0.5b.
-- `llama3.2:1b` pull was stalling on the CDN; if /api/tags later shows
-  it, pick_model's llama-family match auto-selects it (no code change).
+- GPU: RTX A2000 12GB; inference ~6s.
+- Models installed: qwen2.5:0.5b + llama3.2:1b (pull completed after
+  repeated CDN stalls; pick_model auto-selects it for any llama3*
+  preference via family match).
 
 ## Conventions
 - Never fabricate: unknowns report verified/unverified/needs_human.

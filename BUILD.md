@@ -282,7 +282,7 @@ status: audit_logs 33 entries, integrity=ok, chain=ok
   - `SHIELDAI_DATA_DIR` 環境変数を setx で永続化 (新規プロセスから有効)
   - 既存34件の audit_logs・チェーン・DPAPI鍵はそのまま引き継ぎ
   - C: が 0 バイトになっても監査ログ書き込みが落ちなくなる
-- llama3.2:1b pull は daemon 上で継続中 (CDN stall で時間を要している)
+- llama3.2:1b pull 完了 — daemon が断続的 stall を耐えて resume 継続、最終的に 1.3GB 全量 DL→manifest 書込成功。pick_model('llama3:8b') -> llama3.2:1b への family マッチ自動解決を検証
 
 ---
 
