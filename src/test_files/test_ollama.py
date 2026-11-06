@@ -9,7 +9,9 @@ def test():
     avail = c.available()
     assert time.time() - t0 < 5, 'available() must fail fast'
     if avail:
-        assert isinstance(c.models(), list)
+        names = c.models()
+        assert isinstance(names, list) and names, 'daemon up but no models'
+        assert c.pick_model('llama3.2:1b') is not None, 'live pick_model failed'
     else:
         assert c.models() == []
         assert c.pick_model('llama3:8b') is None
