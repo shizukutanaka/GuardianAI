@@ -15,6 +15,7 @@ import sqlite3
 from typing import Any, Dict, List
 
 from guardian_ai.db import DB_PATH as _DB_PATH
+from guardian_ai.db import verify_audit_chain
 
 # Patterns that suggest secrets or regulated identifiers in free text.
 _SENSITIVE_PATTERNS = [
@@ -50,7 +51,12 @@ def redact(text: str) -> str:
 
 
 def audit_integrity(db_path: str = _DB_PATH) -> Dict[str, Any]:
-    """Verify the local audit database is intact and readable."""
+    """Verify the local audit database is intact and untampered.
+
+    Two independent layers: sqlite structure (quick_check) and the
+    content hash chain (verify_audit_chain) - the latter catches a
+    manually edited row, which structural checks cannot.
+    """
     if not os.path.exists(db_path):
         return {"ok": False, "reason": "database file not found"}
     try:
@@ -58,11 +64,17 @@ def audit_integrity(db_path: str = _DB_PATH) -> Dict[str, Any]:
         try:
             quick = conn.execute("PRAGMA quick_check").fetchone()[0]
             count = conn.execute("SELECT COUNT(*) FROM audit_logs").fetchone()[0]
+            chain = verify_audit_chain(conn)
         finally:
             conn.close()
     except sqlite3.Error as e:
         return {"ok": False, "reason": str(e)}
-    return {"ok": quick == "ok", "quick_check": quick, "audit_entries": count}
+    return {
+        "ok": quick == "ok" and chain["ok"],
+        "quick_check": quick,
+        "audit_entries": count,
+        "chain": chain,
+    }
 
 
 def check_compliance(data: Any = None) -> Dict[str, Any]:

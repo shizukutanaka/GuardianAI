@@ -1,4 +1,5 @@
 """ShieldAI Database - SQLite schema and initialization"""
+import hashlib
 import sqlite3
 
 from guardian_ai.paths import data_dir
@@ -39,9 +40,12 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
             request TEXT NOT NULL,
             result TEXT NOT NULL,
             timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+            chain_hash TEXT,
             FOREIGN KEY (agent) REFERENCES agents (name)
         )
     """)
+
+    _migrate_chain_hash(conn)
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
@@ -67,17 +71,78 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
     c.executemany(
         "INSERT OR IGNORE INTO agents (name, model) VALUES (?, ?)", AGENTS)
 
+    _backfill_chain(conn)
+
     conn.commit()
     return conn
 
 
+def _chain_hash(prev: str, agent: str, request: str, result: str,
+                timestamp: str) -> str:
+    """sha256 over the previous hash + row fields. Tampering with any row
+    breaks every subsequent hash - the log becomes self-verifying."""
+    body = f"{prev}|{agent}|{request}|{result}|{timestamp}"
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def _migrate_chain_hash(conn: sqlite3.Connection) -> None:
+    """Add chain_hash column to DBs created before it existed."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(audit_logs)")}
+    if "chain_hash" not in cols:
+        conn.execute("ALTER TABLE audit_logs ADD COLUMN chain_hash TEXT")
+        conn.commit()
+
+
+def _backfill_chain(conn: sqlite3.Connection) -> None:
+    """Hash existing rows (id order). Pre-chain rows become the trusted
+    baseline - only NEW tampering can be detected, which is honest."""
+    rows = conn.execute(
+        "SELECT id, agent, request, result, timestamp, chain_hash "
+        "FROM audit_logs ORDER BY id").fetchall()
+    prev = ""
+    dirty = False
+    for rid, agent, req, res, ts, existing in rows:
+        if existing:
+            prev = existing
+            continue
+        h = _chain_hash(prev, agent, req, res, ts)
+        conn.execute("UPDATE audit_logs SET chain_hash = ? WHERE id = ?",
+                     (h, rid))
+        prev = h
+        dirty = True
+    if dirty:
+        conn.commit()
+
+
 def audit_log(conn: sqlite3.Connection, agent: str, request: str, result: str) -> int:
     """Append one entry to audit_logs, commit, and return its row id."""
+    prev_row = conn.execute(
+        "SELECT chain_hash FROM audit_logs ORDER BY id DESC LIMIT 1").fetchone()
+    prev = prev_row[0] if prev_row and prev_row[0] else ""
+    ts = conn.execute("SELECT CURRENT_TIMESTAMP").fetchone()[0]
+    h = _chain_hash(prev, agent, request, result, ts)
     cur = conn.execute(
-        "INSERT INTO audit_logs (agent, request, result) VALUES (?, ?, ?)",
-        (agent, request, result))
+        "INSERT INTO audit_logs (agent, request, result, timestamp, chain_hash) "
+        "VALUES (?, ?, ?, ?, ?)", (agent, request, result, ts, h))
     conn.commit()
     return cur.lastrowid
+
+
+def verify_audit_chain(conn: sqlite3.Connection) -> dict:
+    """Recompute the whole chain. Returns {'ok': bool, 'broken_at': id|None}."""
+    rows = conn.execute(
+        "SELECT id, agent, request, result, timestamp, chain_hash "
+        "FROM audit_logs ORDER BY id").fetchall()
+    prev = ""
+    for rid, agent, req, res, ts, stored in rows:
+        if stored is None:
+            return {"ok": False, "broken_at": rid, "reason": "missing chain_hash"}
+        expect = _chain_hash(prev, agent, req, res, ts)
+        if expect != stored:
+            return {"ok": False, "broken_at": rid,
+                    "reason": "row content or chain_hash was modified"}
+        prev = stored
+    return {"ok": True, "broken_at": None, "entries": len(rows)}
 
 
 def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
@@ -120,4 +185,5 @@ def export_audit(conn: sqlite3.Connection, limit: int = 100,
     return str(path)
 
 
-__all__ = ["init_database", "audit_log", "record_tasks", "export_audit", "DB_PATH"]
+__all__ = ["init_database", "audit_log", "record_tasks", "export_audit",
+           "verify_audit_chain", "DB_PATH"]

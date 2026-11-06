@@ -233,6 +233,28 @@ CLI 動作確認: 契約書リクエスト → obligation 2件抽出・revision 
 - `model_selector.json` が装飾 → `RouterConfig` が実際に読む
 - 検証: 9/9 PASS、pyz は別cwdから起動・新DB作成・status 動作確認
 
+## 2026-11-07 監査ログの改竄耐性
+
+### 残った最大の嘘: 「audit trail が編集し放題」
+- `audit_logs` に `chain_hash` 列を追加 (sha256 ハッシュチェーン:
+  `sha256(prev_hash|agent|request|result|timestamp)`)
+- 既存行は id 順にバックフィル (trusted baseline — これ以降の改竄のみ検知、それが正直な限界)
+- `verify_audit_chain()` で全件再計算 → 改竄行の id を `broken_at` で特定
+- `compliance.audit_integrity` が構造チェック (quick_check) とチェーン検証の二層に
+- 検証: test_chain が id=2 の手動 UPDATE を broken_at=2 で検知することを確認
+
+### 小改善
+- `local_search.find_file()` 経由でベース名ファイル名を ingestion 解決
+- 分類キーワード拡張 (会計/人事/訴訟/インフラ/医療 等) + `simple` 複雑度を実使用
+- `export`/`decrypt FILE` CLI で監査ログ暗号化エクスポート
+- requirements を実使用のみに削減 (cryptography のみ・dev は requirements-dev.txt)
+
+### 検証
+```
+Total: 11, Passed: 11, Failed: 0
+status: audit_logs 33 entries, integrity=ok, chain=ok
+```
+
 ---
 
 Generated: 2026-11-01 / Updated: 2026-11-07

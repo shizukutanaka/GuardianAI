@@ -52,7 +52,10 @@ def show_status(conn) -> None:
     audit = audit_integrity()
     agents = conn.execute("SELECT COUNT(*) FROM agents").fetchone()[0]
     queued = conn.execute("SELECT status, COUNT(*) FROM task_queue GROUP BY status").fetchall()
-    print(f"audit_logs: {audit.get('audit_entries', '?')} entries, integrity={audit.get('quick_check', audit.get('reason'))}")
+    chain = audit.get("chain", {})
+    chain_str = "ok" if chain.get("ok") else f"BROKEN at #{chain.get('broken_at')}" if chain else "n/a"
+    print(f"audit_logs: {audit.get('audit_entries', '?')} entries, "
+          f"integrity={audit.get('quick_check', audit.get('reason'))}, chain={chain_str}")
     print(f"agents: {agents}")
     print("task_queue:", ", ".join(f"{s}={n}" for s, n in queued) or "empty")
 

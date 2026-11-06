@@ -57,25 +57,27 @@ class Router:
         return {"agent": agent.value, "model": model, "complexity": complexity,
                 "tasks": tasks, "thinking": thinking}
 
+    _AGENT_KEYWORDS = (
+        (AgentType.ACCOUNTING, ("決算", "仕訳", "会計", "経費", "請求", "税金")),
+        (AgentType.LEGAL, ("契約書", "法律", "リスク", "訴訟", "規約", "契約")),
+        (AgentType.HR, ("履歴書", "人事", "採用", "面接", "職歴")),
+        (AgentType.IT, ("サーバー", "ログ", "障害", "ネットワーク", "インフラ", "エラー")),
+        (AgentType.DEVELOPER, ("git", "コード", "バグ", "テスト", "レビュー", "デバッグ", "実装")),
+        (AgentType.MEDICAL, ("カルテ", "医療", "診断", "患者", "処方")),
+    )
+
     def classify_agent(self, request):
-        if "決算" in request or "仕訳" in request:
-            return AgentType.ACCOUNTING
-        if "契約書" in request or "法律" in request or "リスク" in request:
-            return AgentType.LEGAL
-        if "履歴書" in request:
-            return AgentType.HR
-        if "サーバー" in request or "ログ" in request or "障害" in request:
-            return AgentType.IT
-        if "git" in request or "コード" in request:
-            return AgentType.DEVELOPER
-        if "カルテ" in request:
-            return AgentType.MEDICAL
+        for agent, keywords in self._AGENT_KEYWORDS:
+            if any(k in request for k in keywords):
+                return agent
         return AgentType.GENERAL
 
     def estimate_complexity(self, request):
         lowered = request.lower()
         if "計画" in request or "プラン" in request or "plan" in lowered:
             return "complex"
+        if len(request) <= 12:
+            return "simple"
         return "medium"
 
     def decompose_tasks(self, request, agent):
