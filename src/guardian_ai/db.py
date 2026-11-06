@@ -91,6 +91,10 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
     # append-only layer: block UPDATE/DELETE on audit_logs. Stops naive
     # edits and bugs (an attacker who owns the file can drop triggers,
     # which is why the keyed chain below is the real integrity check).
+    for trig in ("audit_no_update", "audit_no_delete",
+                 "tasks_no_update", "tasks_no_delete",
+                 "queue_no_update", "queue_no_delete"):
+        conn.execute(f"DROP TRIGGER IF EXISTS {trig}")
     conn.execute("""
         CREATE TRIGGER IF NOT EXISTS audit_no_update
         BEFORE UPDATE ON audit_logs
@@ -100,6 +104,29 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
         CREATE TRIGGER IF NOT EXISTS audit_no_delete
         BEFORE DELETE ON audit_logs
         BEGIN SELECT RAISE(ABORT, 'audit_logs is append-only'); END
+    """)
+    # task_queue/tasks are written by INSERT only (record_tasks never
+    # UPDATEs), so the same append-only rule protects them from a
+    # silent status rewrite - verified the task record is not decorable.
+    conn.execute("""
+        CREATE TRIGGER IF NOT EXISTS queue_no_update
+        BEFORE UPDATE ON task_queue
+        BEGIN SELECT RAISE(ABORT, 'task_queue is append-only'); END
+    """)
+    conn.execute("""
+        CREATE TRIGGER IF NOT EXISTS queue_no_delete
+        BEFORE DELETE ON task_queue
+        BEGIN SELECT RAISE(ABORT, 'task_queue is append-only'); END
+    """)
+    conn.execute("""
+        CREATE TRIGGER IF NOT EXISTS tasks_no_update
+        BEFORE UPDATE ON tasks
+        BEGIN SELECT RAISE(ABORT, 'tasks is append-only'); END
+    """)
+    conn.execute("""
+        CREATE TRIGGER IF NOT EXISTS tasks_no_delete
+        BEFORE DELETE ON tasks
+        BEGIN SELECT RAISE(ABORT, 'tasks is append-only'); END
     """)
     conn.commit()
 
