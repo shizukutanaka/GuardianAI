@@ -1,5 +1,6 @@
 """ShieldAI Database - SQLite schema and initialization"""
 import hashlib
+import hmac
 import sqlite3
 
 from guardian_ai.paths import data_dir
@@ -71,6 +72,7 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
     c.executemany(
         "INSERT OR IGNORE INTO agents (name, model) VALUES (?, ?)", AGENTS)
 
+    _resign_legacy_chain(conn)
     _backfill_chain(conn)
 
     conn.commit()
@@ -79,10 +81,49 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
 
 def _chain_hash(prev: str, agent: str, request: str, result: str,
                 timestamp: str) -> str:
-    """sha256 over the previous hash + row fields. Tampering with any row
-    breaks every subsequent hash - the log becomes self-verifying."""
+    """HMAC(key, prev + row fields) over the chain. A bare hash can be
+    recomputed by anyone with DB access (forgeable); a keyed MAC needs the
+    KMS key, which lives outside the DB (DPAPI-protected), so an attacker
+    who can only write rows cannot re-sign a forged chain."""
+    from guardian_ai.kms import get_key
+    body = f"{prev}|{agent}|{request}|{result}|{timestamp}"
+    return hmac.new(get_key("audit_chain"), body.encode("utf-8"),
+                    hashlib.sha256).hexdigest()
+
+
+def _legacy_chain_hash(prev: str, agent: str, request: str, result: str,
+                       timestamp: str) -> str:
+    """The original bare-sha256 chain algo, kept only to detect intact
+    legacy chains during migration."""
     body = f"{prev}|{agent}|{request}|{result}|{timestamp}"
     return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def _resign_legacy_chain(conn: sqlite3.Connection) -> None:
+    """If every stored chain_hash still matches the *legacy* bare-sha256
+    chain, the row data is intact but forgeable - re-sign the whole chain
+    with the keyed HMAC. A chain matching neither algo is left alone
+    (verify_audit_chain will honestly report it as broken)."""
+    rows = conn.execute(
+        "SELECT id, agent, request, result, timestamp, chain_hash "
+        "FROM audit_logs ORDER BY id").fetchall()
+    if not rows:
+        return
+    prev, legacy_ok = "", True
+    for rid, agent, req, res, ts, stored in rows:
+        if stored != _legacy_chain_hash(prev, agent, req, res, ts):
+            legacy_ok = False
+            break
+        prev = stored
+    if not legacy_ok:
+        return  # already HMAC (verify will pass) or genuinely tampered
+    prev = ""
+    for rid, agent, req, res, ts, stored in rows:
+        h = _chain_hash(prev, agent, req, res, ts)
+        conn.execute("UPDATE audit_logs SET chain_hash = ? WHERE id = ?",
+                     (h, rid))
+        prev = h
+    conn.commit()
 
 
 def _migrate_chain_hash(conn: sqlite3.Connection) -> None:
