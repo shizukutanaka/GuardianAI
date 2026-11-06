@@ -32,7 +32,7 @@ HELP = """Commands:
   <request>     classify -> plan -> execute (100% local) -> audit
   history [N]   show the N most recent audit entries (default 10)
   status        show audit integrity and queue stats
-  export        write the newest 100 audit entries to an encrypted .enc file
+  export        write ALL audit entries + work record to an encrypted .enc file
   decrypt FILE  decrypt an .enc export with the local KMS key
   verify        re-run the HMAC audit-chain check explicitly
   help          show this message
