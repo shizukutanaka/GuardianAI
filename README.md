@@ -32,6 +32,25 @@ data leaves the machine.
 ✓ tests: 11/11 PASS (assertions actually execute)
 ```
 
+## Usage examples
+
+Type a request at the `shieldai@>` prompt — keywords pick the agent
+automatically (Japanese or English):
+
+```
+契約書の法律リスク          -> legal     (obligation/penalty extraction)
+サーバー障害 ERROR 10.0.0.1  -> it        (error/timestamp/host extraction)
+決算書の仕訳 1,000,000円     -> accounting (figures/periods/accounts)
+履歴書 5年経験 スキル         -> hr        (experience/skills/claims)
+カルテの症状 体温38度         -> medical   (measurements; PHI-blocked if secrets found)
+git のバグ修正テスト          -> developer (code blocks/file refs/commands)
+一般事務処理                -> general   (dates/quantities)
+```
+
+Reference a local file by name (e.g. `契約書.txt`) to pull its contents
+into ingestion. Output = deterministic verified result + optional
+`[LLM 推論]` model synthesis (labelled unverified).
+
 ## Commands
 ```bash
 # Setup (once)
