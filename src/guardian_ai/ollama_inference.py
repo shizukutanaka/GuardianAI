@@ -13,7 +13,7 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional
 
-DEFAULT_HOST = "http://localhost:11434"
+DEFAULT_HOST = "http://127.0.0.1:11434"
 
 
 class OllamaClient:

@@ -255,6 +255,23 @@ Total: 11, Passed: 11, Failed: 0
 status: audit_logs 33 entries, integrity=ok, chain=ok
 ```
 
+## 2026-11-07 Ollama 接続 (LLM synthesis を実接続)
+
+### 制約と解決
+- C: 残り ~0.5GB → インストーラー不可。**ポータブル zip** を `D:\ollama\` に展開
+- `OLLAMA_MODELS=D:\ollama\models` でモデルも D: に配置
+- `start-ollama.cmd` で daemon 起動 (手順を固化)
+- qwen2.5:0.5b (397MB) + llama3.2:1b を pull
+
+### 修正
+- `OllamaClient` DEFAULT_HOST → `127.0.0.1` (localhost の ::1 解決でタイムアウトする環境対策)
+- executor の LLM timeout を 60→300s (CPU 初回推論 ~90s で落ちていた)
+- テストは dead port (127.0.0.1:9) の client を注入 → 決定論的で速い
+
+### 検証
+- `available()=True, models=[qwen2.5:0.5b]`
+- 契約書リクエスト → `[LLM 推論 (qwen2.5:0.5b) - モデル生成・未検証]` セクションが出力
+
 ---
 
 Generated: 2026-11-01 / Updated: 2026-11-07

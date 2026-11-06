@@ -108,7 +108,10 @@ def test():
 def test():
     from guardian_ai.router import Router
     from guardian_ai.executor import Executor
-    router, ex = Router(), Executor()
+    from guardian_ai.ollama_inference import OllamaClient
+    router = Router()
+    # dead port -> deterministic path, no LLM dependency in tests
+    ex = Executor(llm=OllamaClient(host='http://127.0.0.1:9', timeout=1))
 
     # legal: contract-like text inline in the request
     req = "契約書の法律リスク: 甲は本件業務を遂行すること。乙は秘密を保持すること。第2版 2026年1月改訂"
@@ -136,7 +139,8 @@ def test():
         with open(fp, 'w', encoding='utf-8') as f:
             f.write('ERROR 2026-11-07T01:00:00 disk full on db01')
         req4 = "サーバー障害分析 server_log.txt"
-        out4 = Executor(search_root=td).execute(req4, router.analyze(req4))
+        out4 = Executor(llm=OllamaClient(host='http://127.0.0.1:9', timeout=1),
+                        search_root=td).execute(req4, router.analyze(req4))
         assert out4['status'] == 'done'
         assert len(out4['files']) == 1
         assert any(e['kind'] == 'error' for e in out4['evidence'])
