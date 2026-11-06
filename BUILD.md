@@ -272,6 +272,18 @@ status: audit_logs 33 entries, integrity=ok, chain=ok
 - `available()=True, models=[qwen2.5:0.5b]`
 - 契約書リクエスト → `[LLM 推論 (qwen2.5:0.5b) - モデル生成・未検証]` セクションが出力
 
+## 2026-11-07 追加監査 + 運用
+
+- **GPU 発見**: 再起動で RTX A2000 12GB を検出 → 推論 87s CPU → ~6s GPU
+- `pick_model` family マッチ (llama3:8b → llama3.2:* を自動選択)
+- `task_queue` に executor の実ステータスを記録 (blocked/failed/done)
+- `OLLAMA_KEEP_ALIVE=24h` でモデル GPU 常駐
+- **C: 100% 満杯対策**: DB+鍵を `D:\shieldai-data` へ移行
+  - `SHIELDAI_DATA_DIR` 環境変数を setx で永続化 (新規プロセスから有効)
+  - 既存34件の audit_logs・チェーン・DPAPI鍵はそのまま引き継ぎ
+  - C: が 0 バイトになっても監査ログ書き込みが落ちなくなる
+- llama3.2:1b pull は daemon 上で継続中 (CDN stall で時間を要している)
+
 ---
 
 Generated: 2026-11-01 / Updated: 2026-11-07
