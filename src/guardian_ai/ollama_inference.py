@@ -9,6 +9,7 @@ Design contract (first principles):
 - LLM output is inference, not verified fact; callers must label it so
 """
 import json
+import re
 import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional
@@ -56,18 +57,23 @@ class OllamaClient:
         data = self._get("/api/tags", self.timeout) or {}
         return [m.get("name", "") for m in data.get("models", []) if m.get("name")]
 
+    @staticmethod
+    def _family(name: str) -> str:
+        """Model family = leading alpha prefix ('llama3.2:1b' -> 'llama')."""
+        return re.match(r"[a-zA-Z]+", name.split(":")[0]).group(0) \
+            if re.match(r"[a-zA-Z]+", name) else name
+
     def pick_model(self, preferred: Optional[str] = None) -> Optional[str]:
-        """Return `preferred` if installed, else the first installed model."""
+        """Return `preferred` if installed, else same family, else first."""
         installed = self.models()
         if not installed:
             return None
         if preferred in installed:
             return preferred
-        # prefer a same-family tag (e.g. llama3:8b-instruct for llama3:8b)
         if preferred:
-            family = preferred.split(":")[0]
+            family = self._family(preferred)
             for name in installed:
-                if name.split(":")[0] == family:
+                if self._family(name) == family:
                     return name
         return installed[0]
 

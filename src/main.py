@@ -48,7 +48,7 @@ def show_history(conn) -> None:
         print(f"  #{row[0]} [{row[1]}] {row[3]}  {row[2]}")
 
 
-def show_status(conn) -> None:
+def show_status(conn, executor) -> None:
     audit = audit_integrity()
     agents = conn.execute("SELECT COUNT(*) FROM agents").fetchone()[0]
     queued = conn.execute("SELECT status, COUNT(*) FROM task_queue GROUP BY status").fetchall()
@@ -58,6 +58,11 @@ def show_status(conn) -> None:
           f"integrity={audit.get('quick_check', audit.get('reason'))}, chain={chain_str}")
     print(f"agents: {agents}")
     print("task_queue:", ", ".join(f"{s}={n}" for s, n in queued) or "empty")
+    ollama = executor.llm
+    if ollama.available():
+        print(f"ollama: up, models={', '.join(ollama.models()) or 'none'}")
+    else:
+        print("ollama: down (deterministic mode)")
 
 
 def show_result(result: dict, entry_id: int) -> None:
@@ -106,7 +111,7 @@ def main() -> None:
                 show_history(conn)
                 continue
             if cmd == "status":
-                show_status(conn)
+                show_status(conn, executor)
                 continue
             if cmd == "export":
                 try:
