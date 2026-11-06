@@ -122,6 +122,11 @@ UNKNOWN_RULES = [
     (("server", "サーバー", "障害"), "Reproduction condition (whether the failure can be made to reproduce)"),
     (("code", "コード"), "Correctness oracle (what counts as passing via tests/execution)"),
     (("contract", "契約書"), "The revision of the valid contract document"),
+    # Agent-specific unknowns so medical/hr/accounting requests get a
+    # verifiable check instead of the generic "Definition of done" fallback.
+    (("症状", "処方", "カルテ", "medical", "診断"), "Dosage and unit basis (whether amounts are in mg/ml/etc)"),
+    (("履歴書", "スキル", "採用", "経験"), "Evidence for claimed experience (whether it is backed by a record)"),
+    (("決算", "仕訳", "会計", "勘定"), "Applicable accounting standard and closing period"),
 ]
 
 

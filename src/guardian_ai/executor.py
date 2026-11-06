@@ -72,6 +72,9 @@ _UNKNOWN_CHECKS: List[Tuple[str, "re.Pattern", str]] = [
     ("Reproduction condition", re.compile(r"再現|手順|repro|steps?|発生条件|再起", re.I), "reproduction steps"),
     ("Correctness oracle", re.compile(r"テスト|test|期待|expected|合格|pass", re.I), "passing criteria"),
     ("valid contract document", re.compile(r"第\s*\d+\s*版|改訂|revision|ver\.?\s*\d|20\d{2}年.*版", re.I), "valid revision"),
+    ("Dosage and unit", re.compile(r"\d+(?:\.\d+)?\s*(?:mg|ml|g|mcg|μg|単位|錠|cap|tablet)", re.I), "dosage units"),
+    ("claimed experience", re.compile(r"\d+\s*年|証明|在籍|勤務|実績|experience", re.I), "experience record"),
+    ("accounting standard", re.compile(r"GAAP|IFRS|JIS|基準|適用|期末|締め|closing|period", re.I), "accounting standard/period"),
 ]
 
 
