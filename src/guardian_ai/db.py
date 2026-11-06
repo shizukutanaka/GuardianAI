@@ -47,6 +47,18 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
     """)
 
     _migrate_chain_hash(conn)
+    # append-only triggers are dropped at init start so migrations can
+    # still write (re-signed below); they are re-created at init end.
+    conn.execute("DROP TRIGGER IF EXISTS audit_no_update")
+    conn.execute("DROP TRIGGER IF EXISTS audit_no_delete")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS chain_state (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            row_count INTEGER NOT NULL,
+            head TEXT NOT NULL,
+            state_hmac TEXT NOT NULL
+        )
+    """)
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
@@ -74,6 +86,21 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
 
     _resign_legacy_chain(conn)
     _backfill_chain(conn)
+    _resync_chain_state(conn)
+    # append-only layer: block UPDATE/DELETE on audit_logs. Stops naive
+    # edits and bugs (an attacker who owns the file can drop triggers,
+    # which is why the keyed chain below is the real integrity check).
+    conn.execute("""
+        CREATE TRIGGER IF NOT EXISTS audit_no_update
+        BEFORE UPDATE ON audit_logs
+        BEGIN SELECT RAISE(ABORT, 'audit_logs is append-only'); END
+    """)
+    conn.execute("""
+        CREATE TRIGGER IF NOT EXISTS audit_no_delete
+        BEFORE DELETE ON audit_logs
+        BEGIN SELECT RAISE(ABORT, 'audit_logs is append-only'); END
+    """)
+    conn.commit()
 
     conn.commit()
     return conn
@@ -155,6 +182,33 @@ def _backfill_chain(conn: sqlite3.Connection) -> None:
         conn.commit()
 
 
+def _state_hmac(row_count: int, head: str) -> str:
+    """Keyed MAC over the authenticated chain head+count. Deleting the
+    newest rows leaves a valid chain but a stale state -> detected."""
+    from guardian_ai.kms import get_key
+    return hmac.new(get_key("audit_chain"),
+                    f"{row_count}|{head}".encode("utf-8"),
+                    hashlib.sha256).hexdigest()
+
+
+def _update_chain_state(conn: sqlite3.Connection) -> None:
+    row = conn.execute(
+        "SELECT COUNT(*), (SELECT chain_hash FROM audit_logs "
+        "ORDER BY id DESC LIMIT 1) FROM audit_logs").fetchone()
+    conn.execute(
+        "INSERT INTO chain_state (id, row_count, head, state_hmac) "
+        "VALUES (1, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET "
+        "row_count=excluded.row_count, head=excluded.head, "
+        "state_hmac=excluded.state_hmac",
+        (row[0], row[1] or "", _state_hmac(row[0], row[1] or "")))
+    conn.commit()
+
+
+def _resync_chain_state(conn: sqlite3.Connection) -> None:
+    """Create or repair chain_state from intact rows (init-time)."""
+    _update_chain_state(conn)
+
+
 def audit_log(conn: sqlite3.Connection, agent: str, request: str, result: str) -> int:
     """Append one entry to audit_logs, commit, and return its row id."""
     prev_row = conn.execute(
@@ -166,11 +220,15 @@ def audit_log(conn: sqlite3.Connection, agent: str, request: str, result: str) -
         "INSERT INTO audit_logs (agent, request, result, timestamp, chain_hash) "
         "VALUES (?, ?, ?, ?, ?)", (agent, request, result, ts, h))
     conn.commit()
+    _update_chain_state(conn)
     return cur.lastrowid
 
 
 def verify_audit_chain(conn: sqlite3.Connection) -> dict:
-    """Recompute the whole chain. Returns {'ok': bool, 'broken_at': id|None}."""
+    """Recompute the whole chain + the authenticated head. Returns
+    {'ok': bool, 'broken_at': id|None}. The chain_state check catches
+    truncation: deleting the newest rows leaves a valid-looking chain but
+    a stale count/head that only the key-holder could update."""
     rows = conn.execute(
         "SELECT id, agent, request, result, timestamp, chain_hash "
         "FROM audit_logs ORDER BY id").fetchall()
@@ -183,6 +241,17 @@ def verify_audit_chain(conn: sqlite3.Connection) -> dict:
             return {"ok": False, "broken_at": rid,
                     "reason": "row content or chain_hash was modified"}
         prev = stored
+    state = conn.execute(
+        "SELECT row_count, head, state_hmac FROM chain_state "
+        "WHERE id = 1").fetchone()
+    if state:
+        scount, shead, shmac = state
+        if shmac != _state_hmac(scount, shead):
+            return {"ok": False, "broken_at": None,
+                    "reason": "chain_state signature invalid"}
+        if scount != len(rows) or shead != (prev or ""):
+            return {"ok": False, "broken_at": None,
+                    "reason": "tail rows deleted or head replaced"}
     return {"ok": True, "broken_at": None, "entries": len(rows)}
 
 

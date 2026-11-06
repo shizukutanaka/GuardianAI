@@ -23,9 +23,18 @@ _SENSITIVE_PATTERNS = [
         r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----"
         r"|-----BEGIN [A-Z ]*PRIVATE KEY-----")),
     ("aws_access_key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
-    ("api_key", re.compile(r"\b(sk|pk|key|api)[-_][A-Za-z0-9]{16,}\b", re.I)),
+    # short keys like sk-ABC123456789 (12 chars) were missed at >=16
+    ("api_key", re.compile(r"\b(sk|pk|key|api)[-_][A-Za-z0-9]{10,}\b", re.I)),
+    ("service_token", re.compile(
+        r"\b(ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|glpat-[A-Za-z0-9_-]{10,}|"
+        r"xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{20,})\b")),
+    ("bearer_token", re.compile(r"bearer\s+[A-Za-z0-9._-]{10,}", re.I)),
+    ("password", re.compile(
+        r"(?:password|passwd|pwd|secret|パスワード)\s*[:=：]\s*[^\s,;。]{4,}", re.I)),
     ("jwt", re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}\b")),
     ("credit_card", re.compile(r"\b(?:\d[ -]?){13,19}\b")),
+    # JP My Number (12 digits) - distinct from phone (10-11) and CC (13-19)
+    ("my_number_jp", re.compile(r"(?<!\d)\d{12}(?!\d)")),
 ]
 
 

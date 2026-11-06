@@ -285,16 +285,19 @@ class Executor:
         steps.append({"step": "ingestion", "status": ing_status,
                       "detail": detail})
 
-        # --- PHI gate (medical fundamental, enforced) --------------------
+        # --- secret gate (all agents) ------------------------------------
+        # "Secrets are deleted, not processed" is a universal principle -
+        # a credential pasted into ANY request must not reach extraction
+        # or the LLM prompt, regardless of which agent was routed to.
         phi_hits = scan_sensitive(corpus)
-        if agent == "medical" and phi_hits:
+        if phi_hits:
             return {
                 "status": "blocked",
-                "reason": f"PHI/secret patterns detected ({', '.join(phi_hits)}); "
-                          "anonymization must be verified before processing",
+                "reason": f"secret patterns detected ({', '.join(phi_hits)}); "
+                          "anonymize before processing",
                 "steps": steps + [{"step": "extraction", "status": "blocked",
-                                   "detail": "PHI gate"}],
-                "answer": "医療データに PHI/機密パターンを検出。匿名化検証が先決です。処理をブロックしました。",
+                                   "detail": "secret gate"}],
+                "answer": "機密パターンを検出。匿名化してから再試行してください。処理をブロックしました。",
             }
 
         # --- step 2: extraction ------------------------------------------

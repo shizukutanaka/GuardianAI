@@ -6,7 +6,8 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from guardian_ai.compliance import audit_integrity, redact
-from guardian_ai.db import init_database, audit_log, export_audit, record_tasks
+from guardian_ai.db import (init_database, audit_log, export_audit,
+                            record_tasks, verify_audit_chain)
 from guardian_ai.executor import Executor
 from guardian_ai.router import Router
 
@@ -89,6 +90,10 @@ def main() -> None:
     router = Router()
     executor = Executor()
     conn = init_database()
+    chain = verify_audit_chain(conn)
+    if not chain.get("ok"):
+        print(f"[WARN] audit chain broken at #{chain.get('broken_at')}: "
+              f"{chain.get('reason', '')} - logs may have been tampered with")
 
     print(BANNER)
     try:
