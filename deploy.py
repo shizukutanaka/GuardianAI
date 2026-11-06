@@ -25,7 +25,8 @@ def _zipapp_filter(path: Path) -> bool:
     parts = set(path.parts)
     if parts & {"__pycache__", ".shield_keys", "test_files", "test_reports"}:
         return False
-    return not path.name.endswith((".db", ".db-journal", ".pyc", ".pyo", ".key"))
+    return not path.name.endswith(
+        (".db", ".db-journal", ".pyc", ".pyo", ".key", ".enc"))
 
 
 def build() -> bool:
