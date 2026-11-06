@@ -24,9 +24,8 @@ GUI -> Agent Router -> [Accounting | Legal | HR | IT | Developer | Medical | Gen
    - Select model based on complexity
    - Decompose tasks
 
-2. Agent Connector (`src/guardian_ai/connector.py`)
-   - Connect multiple agents in parallel
-   - Aggregate results
+2. First Principles engine (`src/guardian_ai/first_principles.py`)
+   - Strip assumptions -> fundamentals -> unknowns -> reconstruct plan
 
 3. Model Selector (`config/model_selector.yaml`)
    - Auto/manual model switching

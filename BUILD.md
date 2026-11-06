@@ -181,4 +181,25 @@ bandit -r src/ -ll
 
 ---
 
-Generated: 2026-11-01
+## 2026-11-07 第一原理監査 + 実装継続
+
+### 監査で発見した「偽のオラクル」(削除・修正)
+- テストが空転: `def test():` を定義するだけで未呼出 → 4/4 PASS は無意味だった。実実行されるテストに修正 (7 件)
+- AES-GCM の認証タグ未検証 + CBC 時代の PKCS7 パディング残存 → タグ検証・パディング廃止
+- 暗号化キーがインスタンス毎に再生成 → 復号不能だった。KMS (env → Windows DPAPI → key file) で永続化
+- `compliance` が常に "compliant" を返す嘘 → 監査DB整合性 + 機密情報スキャンの実チェックに
+- `kms.get_key` が `"stub_key_for_X"` を返す嘘 → 実キー管理に
+- `connector.py` は未使用・「parallel」の名の割に直列・引数型不一致 → 削除
+- DB が `src/shield_ai.db` と `src/guardian_ai/shield_ai.db` の2系統 → `guardian_ai.db` に統一、agents 7件シード
+- `main.py` の CLI ループが二重プロンプトで破綻 → 単一ループに整理、思考パスを audit_logs に記録
+- first_principles のトリガーが英語のみ → 日英キーワード対応 (「リスク」「サーバー」「契約書」等)
+- `local_search` の除外パターンが機能していない (`venv/` を走査していた) → fnmatch で修正
+
+### 検証
+```
+Total: 7, Passed: 7, Failed: 0  (classify/agents/think/encrypt/tamper/search/compliance)
+```
+
+---
+
+Generated: 2026-11-01 / Updated: 2026-11-07

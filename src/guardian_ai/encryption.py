@@ -1,88 +1,83 @@
+"""ShieldAI Encryption - AES-256-GCM with authenticated key management.
 
-"""Shield AI - Encryption Module (AES256 + Credential Manager/TPM)"""
-import os
-import secrets
+Wire format: base64( iv(12) || ciphertext || tag(16) )
+
+GCM is an authenticated stream mode: no padding is needed (PKCS7 was a
+CBC leftover), and the tag is what makes tampering detectable. Decrypt
+verifies the tag and raises ValueError on any mismatch.
+"""
 import base64
-import binascii
+import secrets
 from typing import Optional, Union
 
-try:
-    import wincred
-    HAS_WINCRED = True
-except ImportError:
-    HAS_WINCRED = False
+from guardian_ai.kms import get_key
 
 try:
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
     from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives import padding
-    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
     HAS_CRYPTO = True
 except ImportError:
     HAS_CRYPTO = False
 
+_IV_LEN = 12
+_TAG_LEN = 16
+
 
 class Encryption:
-    """AES256-GCM 暗号化モジュール"""
-    
-    def __init__(self):
-        self.key: Optional[bytes] = None
-        self.initialized = False
-    
-    def _ensure_key(self) -> bytes:
-        """キーが存在しない場合生成"""
-        if self.key is None:
-            self.key = self.generate_key()
-        return self.key
-    
+    """AES-256-GCM encryption with a persistent local key."""
+
+    def __init__(self, service_name: str = "shieldai"):
+        if not HAS_CRYPTO:
+            raise RuntimeError("cryptography package required: pip install cryptography")
+        self.service_name = service_name
+        self._key: Optional[bytes] = None
+
+    @property
+    def key(self) -> bytes:
+        """Persistent key resolved through the KMS (env -> DPAPI -> key file)."""
+        if self._key is None:
+            self._key = get_key(self.service_name)
+        return self._key
+
     def generate_key(self) -> bytes:
-        """32 バイトの AES256 キー生成"""
+        """Generate a fresh 32-byte AES-256 key (not persisted)."""
         return secrets.token_bytes(32)
-    
+
     def encrypt(self, plaintext: Union[str, bytes], key: Optional[bytes] = None) -> str:
-        """AES256-GCM 暗号化"""
-        key = key or self._ensure_key()
-        
-        if HAS_CRYPTO:
-            iv = secrets.token_bytes(12)
-            cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
-            encryptor = cipher.encryptor()
-            padder = padding.PKCS7(128).padder()
-            padded_data = padder.update(plaintext.encode() if isinstance(plaintext, str) else plaintext) + padder.finalize()
-            ciphertext = encryptor.update(padded_data) + encryptor.finalize()
-            return base64.b64encode(iv + ciphertext).decode()
-        else:
-            return base64.b64encode(plaintext.encode()).decode()
-    
+        """AES-256-GCM encrypt; returns base64(iv || ciphertext || tag)."""
+        key = key or self.key
+        data = plaintext.encode() if isinstance(plaintext, str) else plaintext
+
+        iv = secrets.token_bytes(_IV_LEN)
+        cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
+        encryptor = cipher.encryptor()
+        ciphertext = encryptor.update(data) + encryptor.finalize()
+        return base64.b64encode(iv + ciphertext + encryptor.tag).decode()
+
     def decrypt(self, ciphertext: str, key: Optional[bytes] = None) -> str:
-        """AES256-GCM 復号化"""
-        key = key or self._ensure_key()
-        
-        if HAS_CRYPTO:
-            try:
-                data = base64.b64decode(ciphertext)
-                iv = data[:12]
-                ciphertext_data = data[12:]
-                cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
-                decryptor = cipher.decryptor()
-                decrypted = decryptor.update(ciphertext_data)
-                # PKCS7 パディング削除
-                unpadder = padding.PKCS7(128).unpadder()
-                decrypted = unpadder.update(decrypted) + unpadder.finalize()
-                return decrypted.decode()
-            except Exception as e:
-                # 復号化失敗の場合
-                return f"Decrypt failed: {e}"
-        else:
-            return base64.b64decode(ciphertext).decode()
-    
+        """AES-256-GCM decrypt. Raises ValueError if the tag does not verify."""
+        key = key or self.key
+        try:
+            raw = base64.b64decode(ciphertext, validate=True)
+        except Exception as e:
+            raise ValueError(f"invalid ciphertext encoding: {e}") from e
+        if len(raw) < _IV_LEN + _TAG_LEN:
+            raise ValueError("ciphertext too short")
+
+        iv, body, tag = raw[:_IV_LEN], raw[_IV_LEN:-_TAG_LEN], raw[-_TAG_LEN:]
+        cipher = Cipher(algorithms.AES(key), modes.GCM(iv, tag), backend=default_backend())
+        decryptor = cipher.decryptor()
+        try:
+            data = decryptor.update(body) + decryptor.finalize()
+        except Exception as e:
+            raise ValueError(f"authentication failed: {e}") from e
+        return data.decode()
+
     def load_from_credential_manager(self, service_name: str) -> bytes:
-        """Credential Manager からキーを読み込む（Windows）"""
-        if HAS_WINCRED:
-            cred = wincred.CredentialManager()
-            cred.Get(service_name)
-            return self.key or self.generate_key()
-        return self.key or self.generate_key()
+        """Load (or create) the key for a service via the KMS."""
+        self.service_name = service_name
+        self._key = None
+        return self.key
 
 
 __all__ = ["Encryption"]

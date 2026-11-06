@@ -24,5 +24,8 @@ Thumbs.db
 *.json
 config/
 skill/
+.shield_keys/
+*.db
+*.db-journal
 
 # Ignore Python bytecode

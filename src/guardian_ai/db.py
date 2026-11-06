@@ -4,12 +4,23 @@ import os
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "shield_ai.db")
 
-def init_database():
-    """Initialize database schema"""
-    conn = sqlite3.connect(DB_PATH)
+AGENTS = [
+    ("accounting", "llama3:8b"),
+    ("legal", "llama3:8b"),
+    ("hr", "llama3:8b"),
+    ("it", "llama3:8b"),
+    ("developer", "llama3:8b"),
+    ("medical", "llama3:8b"),
+    ("general", "llama3:8b"),
+]
+
+
+def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
+    """Initialize schema, seed agents, and return an open connection."""
+    conn = sqlite3.connect(db_path)
+    conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
-    
-    # Create agents table
+
     c.execute("""
         CREATE TABLE IF NOT EXISTS agents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,8 +30,7 @@ def init_database():
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
-    # Create audit_logs table
+
     c.execute("""
         CREATE TABLE IF NOT EXISTS audit_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,8 +41,16 @@ def init_database():
             FOREIGN KEY (agent) REFERENCES agents (name)
         )
     """)
-    
-    # Create task_queue table
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent TEXT NOT NULL,
+            priority TEXT DEFAULT 'medium',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     c.execute("""
         CREATE TABLE IF NOT EXISTS task_queue (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,9 +62,21 @@ def init_database():
             FOREIGN KEY (task_id) REFERENCES tasks (id)
         )
     """)
-    
+
+    c.executemany(
+        "INSERT OR IGNORE INTO agents (name, model) VALUES (?, ?)", AGENTS)
+
     conn.commit()
-    # Keep connection open for audit logging
-    # conn.close()  # Deliberately not closing for audit logging
-    print(f"Database initialized: {DB_PATH}")
     return conn
+
+
+def audit_log(conn: sqlite3.Connection, agent: str, request: str, result: str) -> int:
+    """Append one entry to audit_logs, commit, and return its row id."""
+    cur = conn.execute(
+        "INSERT INTO audit_logs (agent, request, result) VALUES (?, ?, ?)",
+        (agent, request, result))
+    conn.commit()
+    return cur.lastrowid
+
+
+__all__ = ["init_database", "audit_log", "DB_PATH"]
