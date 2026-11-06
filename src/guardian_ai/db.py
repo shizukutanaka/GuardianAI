@@ -66,6 +66,7 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             agent TEXT NOT NULL,
             priority TEXT DEFAULT 'medium',
+            description TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -189,6 +190,10 @@ def _migrate_chain_hash(conn: sqlite3.Connection) -> None:
         conn.commit()
     if "latency_ms" not in cols:
         conn.execute("ALTER TABLE audit_logs ADD COLUMN latency_ms INTEGER")
+        conn.commit()
+    task_cols = {r[1] for r in conn.execute("PRAGMA table_info(tasks)")}
+    if task_cols and "description" not in task_cols:
+        conn.execute("ALTER TABLE tasks ADD COLUMN description TEXT")
         conn.commit()
 
 
@@ -317,8 +322,10 @@ def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
         else:
             status = status_by_type.get(stype, "skipped")
             # 'skipped' is honest when a gate (e.g. PHI) stopped the run
+        desc = step.get("description") or step.get("text") or stype
         cur = conn.execute(
-            "INSERT INTO tasks (agent, priority) VALUES (?, ?)", (agent, priority))
+            "INSERT INTO tasks (agent, priority, description) "
+            "VALUES (?, ?, ?)", (agent, priority, desc))
         conn.execute(
             "INSERT INTO task_queue (task_id, agent, status, priority) "
             "VALUES (?, ?, ?, ?)", (cur.lastrowid, agent, status, priority))
