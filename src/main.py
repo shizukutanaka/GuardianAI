@@ -184,12 +184,14 @@ def main() -> None:
             t0 = time.monotonic()
             result["execution"] = executor.execute(user_input, result)
             latency_ms = int((time.monotonic() - t0) * 1000)
-            record_tasks(conn, result["agent"], result["complexity"],
-                         result["tasks"], result["execution"].get("steps"))
-            # Secrets are deleted, not stored: PHI/keys never reach the log.
+            # audit first so tasks can link back to their audit entry -
+            # a task with no audit entry is a forged work record.
             entry_id = audit_log(conn, result["agent"],
                                  redact(user_input), redact(str(result)),
                                  latency_ms=latency_ms)
+            record_tasks(conn, result["agent"], result["complexity"],
+                         result["tasks"], result["execution"].get("steps"),
+                         audit_entry_id=entry_id)
             show_result(result, entry_id)
     finally:
         conn.close()

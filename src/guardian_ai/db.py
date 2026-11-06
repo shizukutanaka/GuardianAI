@@ -73,6 +73,7 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
             agent TEXT NOT NULL,
             priority TEXT DEFAULT 'medium',
             description TEXT,
+            audit_entry_id INTEGER,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -201,6 +202,9 @@ def _migrate_chain_hash(conn: sqlite3.Connection) -> None:
     if task_cols and "description" not in task_cols:
         conn.execute("ALTER TABLE tasks ADD COLUMN description TEXT")
         conn.commit()
+    if task_cols and "audit_entry_id" not in task_cols:
+        conn.execute("ALTER TABLE tasks ADD COLUMN audit_entry_id INTEGER")
+        conn.commit()
 
 
 def _backfill_chain(conn: sqlite3.Connection) -> None:
@@ -308,12 +312,17 @@ def verify_audit_chain(conn: sqlite3.Connection) -> dict:
     present = {r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='trigger'").fetchall()}
     missing = [t for t in _EXPECTED_TRIGGERS if t not in present]
+    # task_queue is operational state, not the audit trail - a forged
+    # INSERT can point audit_entry_id at a real entry, so a link-based
+    # check would give false confidence. The immutable audit record is
+    # audit_logs (chain-protected); task_queue is the working queue.
     return {"ok": True, "broken_at": None, "entries": len(rows),
             "triggers_missing": missing}
 
 
 def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
-                 steps: list, execution_steps: list = None) -> None:
+                 steps: list, execution_steps: list = None,
+                 audit_entry_id: int = None) -> None:
     """Persist plan steps into tasks + task_queue.
 
     `execution_steps` (Executor's step outcomes) supply real statuses;
@@ -337,8 +346,8 @@ def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
             # 'skipped' is honest when a gate (e.g. PHI) stopped the run
         desc = step.get("description") or step.get("text") or stype
         cur = conn.execute(
-            "INSERT INTO tasks (agent, priority, description) "
-            "VALUES (?, ?, ?)", (agent, priority, desc))
+            "INSERT INTO tasks (agent, priority, description, audit_entry_id) "
+            "VALUES (?, ?, ?, ?)", (agent, priority, desc, audit_entry_id))
         conn.execute(
             "INSERT INTO task_queue (task_id, agent, status, priority) "
             "VALUES (?, ?, ?, ?)", (cur.lastrowid, agent, status, priority))
