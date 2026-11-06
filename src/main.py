@@ -129,7 +129,7 @@ def main() -> None:
                 v = verify_audit_chain(conn)
                 if v["ok"]:
                     print(f"chain ok: {v['entries']} entries verified "
-                          "(HMAC + append-only + chain_state)")
+                          "(HMAC chain + chain_state head/count)")
                 else:
                     print(f"chain BROKEN at #{v['broken_at']}: "
                           f"{v.get('reason','')}")
