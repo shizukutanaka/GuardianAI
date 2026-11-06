@@ -26,10 +26,10 @@ data leaves the machine.
 
 ## Health Status
 ```
-✓ audit_logs: 30+ entries
-✓ integrity: ok
+✓ audit_logs: 33+ entries
+✓ integrity: ok (structural + sha256 hash chain, tamper-evident)
 ✓ agents: 7 (all AgentType values seeded)
-✓ tests: 7/7 PASS (assertions actually execute)
+✓ tests: 11/11 PASS (assertions actually execute)
 ```
 
 ## Commands
