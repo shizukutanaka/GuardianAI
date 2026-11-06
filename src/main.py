@@ -144,10 +144,24 @@ def main() -> None:
                 target = Path(user_input[8:].strip())
                 try:
                     import json as _json
+                    from guardian_ai.db import _state_hmac
                     from guardian_ai.encryption import Encryption
                     raw = Encryption().decrypt(target.read_text(encoding="utf-8"))
                     try:
-                        print(_json.dumps(_json.loads(raw), ensure_ascii=False, indent=2))
+                        data = _json.loads(raw)
+                        # Verify the embedded signed anchor - without this
+                        # check the chain_state in the export is decorative.
+                        st = data.get("chain_state")
+                        if st and st.get("state_hmac") == _state_hmac(
+                                st.get("row_count"), st.get("head")):
+                            print(f"[anchor ok] signed chain_state "
+                                  f"({st['row_count']} entries, head "
+                                  f"{st['head'][:16]}...) - snapshot was "
+                                  f"genuinely signed, not forged")
+                        elif st:
+                            print("[anchor INVALID] chain_state signature "
+                                  "mismatch - export may be tampered")
+                        print(_json.dumps(data, ensure_ascii=False, indent=2))
                     except ValueError:
                         print(raw)
                 except Exception as e:
