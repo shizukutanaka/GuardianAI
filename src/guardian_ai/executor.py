@@ -255,12 +255,18 @@ class Executor:
     def _llm_synthesize(self, request: str, model: str,
                         evidence: List[Dict[str, str]],
                         verification: List[Dict[str, str]]) -> Optional[Tuple[str, str]]:
-        """Best-effort local LLM synthesis. Returns (model, text) or None."""
+        """Best-effort local LLM synthesis. Returns (model_label, text)
+        or None - model_label reports the honest fallback when the
+        requested model could not be resolved."""
         if not self.llm.available():
             return None
         chosen = self.llm.pick_model(model)
         if not chosen:
             return None
+        # Honest fallback: the user asked for `model` but pick_model
+        # returned a different one - do not hide the substitution.
+        model_label = chosen if chosen == model else (
+            f"{chosen} (preferred {model} unavailable)")
         ev = "\n".join(f"- [{e['kind']}] {e['text']}" for e in evidence[:8]) or "(証拠なし)"
         un = "\n".join(f"- {v['unknown']} ({v['status']})" for v in verification) or "(なし)"
         # CPU inference can take minutes on the first call (model load +
@@ -272,7 +278,7 @@ class Executor:
             _LLM_PROMPT.format(request=redact(request)[:500],
                                evidence=ev, unknowns=un),
             model=chosen, system=_LLM_SYSTEM, timeout=300)
-        return (chosen, text.strip()) if text else None
+        return (model_label, text.strip()) if text else None
 
     def execute(self, request: str, analysis: Dict[str, Any]) -> Dict[str, Any]:
         agent = analysis.get("agent", "general")
