@@ -62,6 +62,14 @@ def show_status(conn, executor) -> None:
           f"integrity={audit.get('quick_check', audit.get('reason'))}, chain={chain_str}")
     print(f"agents: {agents}")
     print("task_queue:", ", ".join(f"{s}={n}" for s, n in queued) or "empty")
+    # Observability means seeing WHAT was blocked/failed, not just how
+    # many - surface the recent non-done tasks with their descriptions.
+    notable = conn.execute(
+        "SELECT q.agent, q.status, t.description FROM task_queue q "
+        "JOIN tasks t ON q.task_id = t.id WHERE q.status != 'done' "
+        "ORDER BY q.id DESC LIMIT 5").fetchall()
+    for agent, st, desc in notable:
+        print(f"  [{st}] {agent}: {desc or '(no description)'}")
     ollama = executor.llm
     if ollama.available():
         print(f"ollama: up, models={', '.join(ollama.models()) or 'none'}")
