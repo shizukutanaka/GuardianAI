@@ -200,6 +200,30 @@ bandit -r src/ -ll
 Total: 7, Passed: 7, Failed: 0  (classify/agents/think/encrypt/tamper/search/compliance)
 ```
 
+## 2026-11-07 実行層の実装 (ループを閉じる)
+
+最大の欠落は「計画は立てるが実行しない」ことだった。synthesis が実在しなかった。
+
+### 追加
+- `executor.py`: plan ステップを実際に走らせる決定論的 executor
+  - ingestion: リクエスト内のローカルファイルパスを検出→読込 (UTF-8→CP932)
+  - extraction: agent 別パターン抽出 (legal=義務/当事者/違約、it=エラー/タイムスタンプ/ホスト 等)
+  - verification: unknowns をソース本文と照合 → verified/unverified/needs_human を正直に報告
+  - synthesis: 抽出証拠のみから回答を構成 (捏造しない)
+  - medical: PHI パターン検出で実行前ブロック (自分の fundamental をコードで強制)
+- `ollama_inference.py`: ローカル Ollama HTTP クライアント (stdlib のみ)
+  - `available()` は 3 秒で fail-fast・結果キャッシュ
+  - synthesis ステップにのみ接続: 検証済み証拠だけをプロンプトに投入
+  - LLM 出力は「モデル生成・未検証」と明示ラベル
+- `db.record_tasks()`: plan 各ステップを tasks/task_queue に記録 (休眠テーブルに実役割)
+- CI: workflows に cryptography インストールを追加 (encrypt テストが CI で落ちる問題)
+
+### 検証
+```
+Total: 9, Passed: 9, Failed: 0
+CLI 動作確認: 契約書リクエスト → obligation 2件抽出・revision verified・audit_logs #31
+```
+
 ---
 
 Generated: 2026-11-01 / Updated: 2026-11-07

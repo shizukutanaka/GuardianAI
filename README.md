@@ -10,6 +10,13 @@ data leaves the machine.
 - **First Principles**: every request is stripped of assumptions, reduced to
   verifiable fundamentals, unknowns are named, and the shortest task chain is
   reconstructed (`guardian_ai/first_principles.py`)
+- **Executor**: plans actually run - ingestion (local files), deterministic
+  per-agent extraction, unknown verification against source text, synthesis
+  (`guardian_ai/executor.py`). Medical requests with PHI patterns are blocked
+  before extraction.
+- **LLM (optional)**: local Ollama daemon only (`guardian_ai/ollama_inference.py`,
+  stdlib HTTP). When reachable it fills in the synthesis step using verified
+  evidence only; output is labelled as model inference, never fact.
 - **Encryption**: AES-256-GCM with authenticated tag verification; keys managed
   locally via env var or Windows DPAPI (`guardian_ai/kms.py`)
 - **Audit Trail**: SQLite `audit_logs` with FK-enforced agent names; the full

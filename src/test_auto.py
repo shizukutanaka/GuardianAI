@@ -104,6 +104,52 @@ def test():
     assert not any('venv' in f.split(os.sep) for f in py_files)
 """ + FOOTER,
 
+    "execute": HEADER + """
+def test():
+    from guardian_ai.router import Router
+    from guardian_ai.executor import Executor
+    router, ex = Router(), Executor()
+
+    # legal: contract-like text inline in the request
+    req = "契約書の法律リスク: 甲は本件業務を遂行すること。乙は秘密を保持すること。第2版 2026年1月改訂"
+    out = ex.execute(req, router.analyze(req))
+    assert out['status'] == 'done', out.get('reason')
+    assert any(e['kind'] == 'obligation' for e in out['evidence'])
+    assert any(v['status'] == 'verified' for v in out['verification'])
+    assert 'ローカル解析結果' in out['answer']
+
+    # it: pasted log line
+    req2 = "サーバー障害分析 ERROR 2026-11-07T01:23:45 connection timeout host 10.0.0.1"
+    out2 = ex.execute(req2, router.analyze(req2))
+    assert out2['status'] == 'done'
+    assert any(e['kind'] in ('error', 'timestamp', 'host') for e in out2['evidence'])
+
+    # medical: PHI-shaped content must block before extraction
+    req3 = "カルテ確認 -----BEGIN RSA PRIVATE KEY----- test"
+    out3 = ex.execute(req3, router.analyze(req3))
+    assert out3['status'] == 'blocked'
+""" + FOOTER,
+
+    "ollama": HEADER + """
+def test():
+    import time
+    from guardian_ai.ollama_inference import OllamaClient
+    c = OllamaClient(timeout=1.0)
+    t0 = time.time()
+    avail = c.available()
+    assert time.time() - t0 < 5, 'available() must fail fast'
+    if avail:
+        assert isinstance(c.models(), list)
+    else:
+        assert c.models() == []
+        assert c.pick_model('llama3:8b') is None
+        # executor must still answer deterministically without a daemon
+        from guardian_ai.router import Router
+        from guardian_ai.executor import Executor
+        out = Executor(llm=c).execute('一般事務処理', Router().analyze('一般事務処理'))
+        assert out['status'] == 'done' and out['llm_model'] is None
+""" + FOOTER,
+
     "compliance": HEADER + """
 def test():
     from guardian_ai.compliance import check_compliance, audit_integrity

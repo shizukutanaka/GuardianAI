@@ -1,10 +1,11 @@
-"""ShieldAI CLI - classify requests, build first-principles plans, audit everything."""
+"""ShieldAI CLI - classify requests, execute first-principles plans, audit everything."""
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from guardian_ai.db import init_database, audit_log
+from guardian_ai.db import init_database, audit_log, record_tasks
+from guardian_ai.executor import Executor
 from guardian_ai.router import Router
 
 BANNER = """
@@ -18,11 +19,13 @@ Examples:
   サーバー障害分析        -> it
   コードレビュー          -> developer
   一般事務処理            -> general
+
+Tip: paste log/contract text or a local file path into the request.
 ==================================================
 """
 
 HELP = """Commands:
-  <request>   classify + plan + audit (100% local)
+  <request>   classify -> plan -> execute (100% local) -> audit
   help        show this message
   quit        exit
 """
@@ -30,6 +33,7 @@ HELP = """Commands:
 
 def show_result(result: dict, entry_id: int) -> None:
     thinking = result.get("thinking", {})
+    execution = result.get("execution", {})
     print(f"\nAgent:      {result['agent']}")
     print(f"Model:      {result['model']}")
     print(f"Complexity: {result['complexity']}")
@@ -38,6 +42,8 @@ def show_result(result: dict, entry_id: int) -> None:
     print("Plan:")
     for step in result["tasks"]:
         print(f"  {step['id']}. [{step['type']}] {step['desc']}")
+    if execution:
+        print(f"\n{execution.get('answer', '(no answer)')}")
     if thinking.get("unknowns"):
         print("Unknowns (verify locally, do not guess):")
         for u in thinking["unknowns"]:
@@ -47,6 +53,7 @@ def show_result(result: dict, entry_id: int) -> None:
 
 def main() -> None:
     router = Router()
+    executor = Executor()
     conn = init_database()
 
     print(BANNER)
@@ -68,6 +75,8 @@ def main() -> None:
                 continue
 
             result = router.analyze(user_input)
+            result["execution"] = executor.execute(user_input, result)
+            record_tasks(conn, result["agent"], result["complexity"], result["tasks"])
             entry_id = audit_log(conn, result["agent"], user_input, str(result))
             show_result(result, entry_id)
     finally:

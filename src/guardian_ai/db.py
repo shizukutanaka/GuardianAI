@@ -79,4 +79,17 @@ def audit_log(conn: sqlite3.Connection, agent: str, request: str, result: str) -
     return cur.lastrowid
 
 
-__all__ = ["init_database", "audit_log", "DB_PATH"]
+def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
+                 steps: list) -> None:
+    """Persist a plan's steps into tasks + task_queue (status=done)."""
+    priority = "high" if complexity == "complex" else "medium"
+    for step in steps:
+        cur = conn.execute(
+            "INSERT INTO tasks (agent, priority) VALUES (?, ?)", (agent, priority))
+        conn.execute(
+            "INSERT INTO task_queue (task_id, agent, status, priority) "
+            "VALUES (?, ?, 'done', ?)", (cur.lastrowid, agent, priority))
+    conn.commit()
+
+
+__all__ = ["init_database", "audit_log", "record_tasks", "DB_PATH"]
