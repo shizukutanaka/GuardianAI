@@ -269,7 +269,8 @@ def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
     without them every step is assumed 'done'."""
     priority = "high" if complexity == "complex" else "medium"
     normalize = {"ok": "done", "fail": "failed",
-                 "blocked": "blocked", "partial": "failed"}
+                 "blocked": "blocked", "partial": "failed",
+                 "redacted": "done"}
     status_by_type = {}
     for s in execution_steps or []:
         status_by_type.setdefault(

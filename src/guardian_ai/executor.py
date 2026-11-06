@@ -17,7 +17,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from guardian_ai.compliance import scan_sensitive
+from guardian_ai.compliance import scan_sensitive, redact
 from guardian_ai.ollama_inference import OllamaClient
 
 MAX_FILE_BYTES = 64 * 1024
@@ -285,20 +285,30 @@ class Executor:
         steps.append({"step": "ingestion", "status": ing_status,
                       "detail": detail})
 
-        # --- secret gate (all agents) ------------------------------------
-        # "Secrets are deleted, not processed" is a universal principle -
-        # a credential pasted into ANY request must not reach extraction
-        # or the LLM prompt, regardless of which agent was routed to.
+        # --- secret handling ---------------------------------------------
+        # "Secrets are deleted, not processed" is the principle. Two tiers:
+        #   medical - regulated data: any secret -> block (defense in depth)
+        #   others  - redact the secret from the corpus and continue;
+        #             the credential never reaches extraction, the LLM
+        #             prompt, or the audit log. This is the LiteLLM-style
+        #             guardrail (mask, not block) and honours the principle
+        #             literally rather than just refusing the request.
         phi_hits = scan_sensitive(corpus)
-        if phi_hits:
+        if phi_hits and agent == "medical":
             return {
                 "status": "blocked",
-                "reason": f"secret patterns detected ({', '.join(phi_hits)}); "
+                "reason": f"PHI/secret patterns detected ({', '.join(phi_hits)}); "
                           "anonymize before processing",
                 "steps": steps + [{"step": "extraction", "status": "blocked",
                                    "detail": "secret gate"}],
-                "answer": "機密パターンを検出。匿名化してから再試行してください。処理をブロックしました。",
+                "answer": "医療データに機密パターンを検出。匿名化してから再試行してください。処理をブロックしました。",
             }
+        redacted_note = None
+        if phi_hits:
+            corpus = redact(corpus)
+            redacted_note = f"secrets redacted at ingestion: {', '.join(phi_hits)}"
+            steps.append({"step": "ingestion", "status": "redacted",
+                          "detail": redacted_note})
 
         # --- step 2: extraction ------------------------------------------
         evidence = _extract(agent, corpus)
