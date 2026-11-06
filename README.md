@@ -44,6 +44,12 @@ venv/Scripts/python src/main.py   # Windows (or: python src/main.py after activa
 # Run tests (generates src/test_files/test_*.py, then executes them)
 venv/Scripts/python src/test_auto.py
 
+# Deploy: build a single-file zipapp (stdlib-only, no cloud)
+venv/Scripts/python deploy.py --deploy   # -> dist/shieldai.pyz
+
+# CLI commands inside main.py:
+#   history, status, export, decrypt FILE, help, quit
+
 # Check health
 python -c "import sqlite3; conn=sqlite3.connect('src/guardian_ai/shield_ai.db'); c=conn.cursor(); c.execute('SELECT COUNT(*) FROM audit_logs'); print('audit_logs:', c.fetchone()[0]); c.execute('PRAGMA integrity_check'); print('integrity:', c.fetchone()[0])"
 ```
