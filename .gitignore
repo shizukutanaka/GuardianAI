@@ -30,4 +30,5 @@ skill/
 
 # Ignore Python bytecode
 dist/
+src/test_reports/
 *.enc
