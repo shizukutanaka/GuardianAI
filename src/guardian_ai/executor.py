@@ -44,10 +44,12 @@ _AGENT_PATTERNS: Dict[str, List[Tuple[str, "re.Pattern"]]] = {
         ("error", re.compile(r"ERROR|FATAL|CRITICAL|Exception|Traceback|タイムアウト|障害|failed", re.I)),
         ("timestamp", re.compile(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}|\d{2}:\d{2}:\d{2}")),
         ("host", re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b|\b(?:[a-z0-9-]+\.)+[a-z]{2,}\b", re.I)),
+        ("http_status", re.compile(r"\b[1-5]\d{2}\b.*(?:status|code|response|HTTP)", re.I)),
     ],
     "developer": [
         ("code_block", re.compile(r"```")),
         ("file_ref", re.compile(r"[\w./-]+\.(?:py|js|ts|tsx|java|go|rs|cpp|cc|c|h|rb|php)\b")),
+        ("line_ref", re.compile(r"[\w./-]+\.[a-z]+:\d+|line\s+\d+|行\s*\d+", re.I)),
         ("command", re.compile(r"\b(?:npm|pip|pytest|cargo|make|gradle|mvn|git)\b")),
     ],
     "hr": [
@@ -62,6 +64,7 @@ _AGENT_PATTERNS: Dict[str, List[Tuple[str, "re.Pattern"]]] = {
     "general": [
         ("date", _DATE_RE),
         ("quantity", _MONEY_RE),
+        ("contact", re.compile(r"\b\d{2,4}[-()]?\d{3,4}[-()]?\d{3,4}\b|[\w.+-]+@[\w-]+\.[\w.]+")),
     ],
 }
 
