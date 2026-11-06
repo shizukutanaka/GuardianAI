@@ -159,7 +159,14 @@ def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
         status_by_type.setdefault(
             s.get("step"), normalize.get(s.get("status"), "done"))
     for step in steps:
-        status = status_by_type.get(step.get("type"), "done")
+        stype = step.get("type")
+        if stype == "audit":
+            status = "done"  # this record itself is the audit trail
+        elif execution_steps is None:
+            status = "done"  # no execution info; assume the plan ran
+        else:
+            status = status_by_type.get(stype, "skipped")
+            # 'skipped' is honest when a gate (e.g. PHI) stopped the run
         cur = conn.execute(
             "INSERT INTO tasks (agent, priority) VALUES (?, ?)", (agent, priority))
         conn.execute(
