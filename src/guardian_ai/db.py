@@ -381,6 +381,12 @@ def export_audit(conn: sqlite3.Connection, limit: int = None,
     state = conn.execute(
         "SELECT row_count, head, state_hmac FROM chain_state "
         "WHERE id = 1").fetchone()
+    # A complete audit snapshot includes the work record, not just the
+    # event log - tasks/task_queue show what was planned and its outcome.
+    tasks = conn.execute(
+        "SELECT t.id, t.agent, t.priority, t.description, "
+        "t.audit_entry_id, q.status FROM tasks t "
+        "LEFT JOIN task_queue q ON q.task_id = t.id").fetchall()
     # Anchor: embedding the signed chain head lets a stored export prove
     # the DB state at export time - an attacker who later rolls back
     # audit rows + chain_state cannot alter this file (AES-GCM, key kept
@@ -391,7 +397,10 @@ def export_audit(conn: sqlite3.Connection, limit: int = None,
          "truncated": truncated,
          "entries": [{"id": r[0], "agent": r[1], "request": r[2],
                       "result": r[3], "timestamp": r[4],
-                      "chain_hash": r[5]} for r in rows]},
+                      "chain_hash": r[5]} for r in rows],
+         "work_record": [{"id": t[0], "agent": t[1], "priority": t[2],
+                          "description": t[3], "audit_entry_id": t[4],
+                          "status": t[5]} for t in tasks]},
         ensure_ascii=False, indent=2)
     blob = Encryption().encrypt(payload)
 
