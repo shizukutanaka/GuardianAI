@@ -7,6 +7,12 @@ from guardian_ai.paths import data_dir
 
 DB_PATH = str(data_dir() / "shield_ai.db")
 
+_EXPECTED_TRIGGERS = (
+    "audit_no_update", "audit_no_delete",
+    "queue_no_update", "queue_no_delete",
+    "tasks_no_update", "tasks_no_delete",
+)
+
 AGENTS = [
     ("accounting", "llama3:8b"),
     ("legal", "llama3:8b"),
@@ -296,7 +302,14 @@ def verify_audit_chain(conn: sqlite3.Connection) -> dict:
         if scount != len(rows) or shead != (prev or ""):
             return {"ok": False, "broken_at": None,
                     "reason": "tail rows deleted or head replaced"}
-    return {"ok": True, "broken_at": None, "entries": len(rows)}
+    # The append-only layer is enforcement, not content - verify it is
+    # actually present (an attacker could DROP the triggers while the
+    # chain stays intact, so reporting its presence is honest).
+    present = {r[0] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='trigger'").fetchall()}
+    missing = [t for t in _EXPECTED_TRIGGERS if t not in present]
+    return {"ok": True, "broken_at": None, "entries": len(rows),
+            "triggers_missing": missing}
 
 
 def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
