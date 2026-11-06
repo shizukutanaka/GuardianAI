@@ -325,9 +325,11 @@ def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
     conn.commit()
 
 
-def export_audit(conn: sqlite3.Connection, limit: int = 100,
+def export_audit(conn: sqlite3.Connection, limit: int = None,
                  out_dir: str = None) -> str:
-    """Export the newest `limit` audit entries as an AES-256-GCM file.
+    """Export audit entries as an AES-256-GCM file. Exports ALL entries by
+    default - a partial export is not a complete audit trail. `truncated`
+    flags an intentional cap (limit set).
 
     Requires the `cryptography` package. Returns the .enc file path.
     """
@@ -337,9 +339,16 @@ def export_audit(conn: sqlite3.Connection, limit: int = 100,
 
     from guardian_ai.encryption import Encryption
 
-    rows = conn.execute(
-        "SELECT id, agent, request, result, timestamp, chain_hash "
-        "FROM audit_logs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    if limit is None:
+        rows = conn.execute(
+            "SELECT id, agent, request, result, timestamp, chain_hash "
+            "FROM audit_logs ORDER BY id DESC").fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT id, agent, request, result, timestamp, chain_hash "
+            "FROM audit_logs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    total = conn.execute("SELECT COUNT(*) FROM audit_logs").fetchone()[0]
+    truncated = len(rows) < total
     state = conn.execute(
         "SELECT row_count, head, state_hmac FROM chain_state "
         "WHERE id = 1").fetchone()
@@ -350,6 +359,7 @@ def export_audit(conn: sqlite3.Connection, limit: int = 100,
     payload = json.dumps(
         {"chain_state": {"row_count": state[0], "head": state[1],
                          "state_hmac": state[2]} if state else None,
+         "truncated": truncated,
          "entries": [{"id": r[0], "agent": r[1], "request": r[2],
                       "result": r[3], "timestamp": r[4],
                       "chain_hash": r[5]} for r in rows]},
