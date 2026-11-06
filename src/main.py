@@ -170,6 +170,24 @@ def main() -> None:
                                   f"({st['row_count']} entries, head "
                                   f"{st['head'][:16]}...) - snapshot was "
                                   f"genuinely signed, not forged")
+                            # Prove the exported entries actually reach
+                            # the signed head - a signed state beside a
+                            # partial/inconsistent entry set is not a
+                            # coherent audit snapshot.
+                            from guardian_ai.db import _chain_hash
+                            prev = ""
+                            for e in sorted(data["entries"],
+                                            key=lambda x: x["id"]):
+                                prev = _chain_hash(
+                                    prev, e["agent"], e["request"],
+                                    e["result"], e["timestamp"])
+                            if prev == st["head"]:
+                                print("[entries ok] chain over exported "
+                                      "entries reaches the signed head")
+                            else:
+                                print("[entries MISMATCH] exported entries "
+                                      "do not form a chain ending at the "
+                                      "signed head - incomplete snapshot")
                         elif st:
                             print("[anchor INVALID] chain_state signature "
                                   "mismatch - export may be tampered")
