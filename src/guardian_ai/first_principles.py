@@ -12,7 +12,6 @@ This module separates every request into 4 deterministic steps:
 No LLM required. Deterministic, 100% local, safe even offline.
 An LLM is only an enhancement that fills in the results of the task chain.
 """
-import re
 from typing import Any, Dict, List
 
 # ------------------------------------------------------------------
@@ -144,7 +143,8 @@ class FirstPrinciples:
                 questioned.append(dict(item))
 
         fundamentals = list(FUNDAMENTALS.get(agent_name, FUNDAMENTALS["general"]))
-        fundamentals += FUNDAMENTALS["general"]  # platform physical laws are always shared
+        if agent_name != "general":
+            fundamentals += FUNDAMENTALS["general"]  # shared physical laws
 
         unknowns = []
         for keywords, item in UNKNOWN_RULES:
