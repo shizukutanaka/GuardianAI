@@ -122,8 +122,13 @@ def main() -> None:
             if cmd.startswith("decrypt "):
                 target = Path(user_input[8:].strip())
                 try:
+                    import json as _json
                     from guardian_ai.encryption import Encryption
-                    print(Encryption().decrypt(target.read_text(encoding="utf-8")))
+                    raw = Encryption().decrypt(target.read_text(encoding="utf-8"))
+                    try:
+                        print(_json.dumps(_json.loads(raw), ensure_ascii=False, indent=2))
+                    except ValueError:
+                        print(raw)
                 except Exception as e:
                     print(f"decrypt failed: {e}")
                 continue
