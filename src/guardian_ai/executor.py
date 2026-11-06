@@ -260,8 +260,12 @@ class Executor:
         un = "\n".join(f"- {v['unknown']} ({v['status']})" for v in verification) or "(なし)"
         # CPU inference can take minutes on the first call (model load +
         # slow eval); a 300s cap keeps the CLI usable while still bounded.
+        # redact the request too - secrets are deleted, not processed, so
+        # they must never reach the LLM prompt either (only corpus+audit
+        # were covered before this Socratic pass).
         text = self.llm.generate(
-            _LLM_PROMPT.format(request=request[:500], evidence=ev, unknowns=un),
+            _LLM_PROMPT.format(request=redact(request)[:500],
+                               evidence=ev, unknowns=un),
             model=chosen, system=_LLM_SYSTEM, timeout=300)
         return (chosen, text.strip()) if text else None
 
