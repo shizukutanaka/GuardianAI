@@ -340,7 +340,7 @@ def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
         if stype == "audit":
             status = "done"  # this record itself is the audit trail
         elif execution_steps is None:
-            status = "done"  # no execution info; assume the plan ran
+            status = "pending"  # no execution info - do not claim 'done'
         else:
             status = status_by_type.get(stype, "skipped")
             # 'skipped' is honest when a gate (e.g. PHI) stopped the run
