@@ -30,7 +30,7 @@ Tip: paste log/contract text or a local file path into the request.
 
 HELP = """Commands:
   <request>     classify -> plan -> execute (100% local) -> audit
-  history       show the 10 most recent audit entries
+  history [N]   show the N most recent audit entries (default 10)
   status        show audit integrity and queue stats
   export        write the newest 100 audit entries to an encrypted .enc file
   decrypt FILE  decrypt an .enc export with the local KMS key
@@ -39,10 +39,10 @@ HELP = """Commands:
 """
 
 
-def show_history(conn) -> None:
+def show_history(conn, limit: int = 10) -> None:
     rows = conn.execute(
         "SELECT id, agent, substr(request, 1, 60), timestamp, latency_ms "
-        "FROM audit_logs ORDER BY id DESC LIMIT 10").fetchall()
+        "FROM audit_logs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     if not rows:
         print("(no audit entries)")
         return
@@ -114,8 +114,12 @@ def main() -> None:
             if cmd == "help":
                 print(HELP)
                 continue
-            if cmd == "history":
-                show_history(conn)
+            if cmd == "history" or cmd.startswith("history "):
+                try:
+                    n = int(cmd.split()[1]) if cmd != "history" else 10
+                except (IndexError, ValueError):
+                    n = 10
+                show_history(conn, max(1, n))
                 continue
             if cmd == "status":
                 show_status(conn, executor)
