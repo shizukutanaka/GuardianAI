@@ -97,6 +97,18 @@ def main() -> None:
     if not chain.get("ok"):
         print(f"[WARN] audit chain broken at #{chain.get('broken_at')}: "
               f"{chain.get('reason', '')} - logs may have been tampered with")
+        # A control plane that claims integrity must not silently keep
+        # writing to a compromised trail - require explicit user
+        # acknowledgment rather than warn-and-continue (fail-open).
+        try:
+            choice = input("Continue anyway? The audit trail may be "
+                           "unreliable. [y/N]: ").strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            choice = ""
+        if choice not in ("y", "yes"):
+            print("Aborting - do not write to a broken audit chain.")
+            conn.close()
+            return
 
     print(BANNER)
     try:
