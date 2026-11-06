@@ -57,6 +57,14 @@ class OllamaClient:
         data = self._get("/api/tags", self.timeout) or {}
         return [m.get("name", "") for m in data.get("models", []) if m.get("name")]
 
+    def loaded(self) -> List[str]:
+        """Names of models currently resident in memory (/api/ps).
+
+        Preferring a loaded model avoids a load/swap stall (like
+        ollama-agent-router's loaded-state check)."""
+        data = self._get("/api/ps", self.timeout) or {}
+        return [m.get("name", "") for m in data.get("models", []) if m.get("name")]
+
     @staticmethod
     def _family(name: str) -> str:
         """Model family = leading alpha prefix ('llama3.2:1b' -> 'llama')."""
@@ -64,18 +72,28 @@ class OllamaClient:
             if re.match(r"[a-zA-Z]+", name) else name
 
     def pick_model(self, preferred: Optional[str] = None) -> Optional[str]:
-        """Return `preferred` if installed, else same family, else first."""
+        """Pick an installed model, preferring one already loaded.
+
+        Order: preferred+loaded > preferred > same-family+loaded >
+        same-family > any loaded > first installed. Choosing a resident
+        model skips the multi-second GPU/CPU load stall."""
         installed = self.models()
         if not installed:
             return None
+        loaded = self.loaded()
+        if preferred in loaded:
+            return preferred
         if preferred in installed:
             return preferred
-        if preferred:
-            family = self._family(preferred)
+        family = self._family(preferred) if preferred else None
+        for name in loaded:
+            if family and self._family(name) == family:
+                return name
+        if family:
             for name in installed:
                 if self._family(name) == family:
                     return name
-        return installed[0]
+        return loaded[0] if loaded else installed[0]
 
     def generate(self, prompt: str, model: str, system: Optional[str] = None,
                  timeout: float = 60.0) -> Optional[str]:
