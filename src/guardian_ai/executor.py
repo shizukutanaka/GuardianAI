@@ -257,16 +257,20 @@ class Executor:
         files = _find_local_files(request, self.search_root)
         corpus_parts = [request]
         read_files: List[Path] = []
+        failed = []
         for p in files:
             try:
                 corpus_parts.append(_read_text(p))
                 read_files.append(p)
             except OSError:
-                steps.append({"step": "ingestion", "status": "fail",
-                              "detail": f"cannot read {p.name}"})
+                failed.append(p.name)
         corpus = "\n".join(corpus_parts)
-        steps.append({"step": "ingestion", "status": "ok",
-                      "detail": f"{len(read_files)} file(s), {len(corpus)} chars"})
+        ing_status = "ok" if not failed else ("partial" if read_files else "fail")
+        detail = f"{len(read_files)} file(s), {len(corpus)} chars"
+        if failed:
+            detail += f" (unreadable: {', '.join(failed)})"
+        steps.append({"step": "ingestion", "status": ing_status,
+                      "detail": detail})
 
         # --- PHI gate (medical fundamental, enforced) --------------------
         phi_hits = scan_sensitive(corpus)
