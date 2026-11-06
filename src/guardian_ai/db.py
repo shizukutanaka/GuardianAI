@@ -398,6 +398,11 @@ def export_audit(conn: sqlite3.Connection, limit: int = None,
          "entries": [{"id": r[0], "agent": r[1], "request": r[2],
                       "result": r[3], "timestamp": r[4],
                       "chain_hash": r[5]} for r in rows],
+         # work_record is operational state, not audit-grade - it is not
+         # chain-protected and can be falsified by INSERT (task_queue is
+         # the working queue, audit_logs is the immutable record). Mark
+         # it so the snapshot is not mistaken for verified audit data.
+         "work_record_unverified": True,
          "work_record": [{"id": t[0], "agent": t[1], "priority": t[2],
                           "description": t[3], "audit_entry_id": t[4],
                           "status": t[5]} for t in tasks]},
