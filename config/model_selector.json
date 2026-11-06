@@ -1,10 +1,10 @@
 {
     "model_selector": {
-        "default": "llama3:8b",
+        "default": "llama3.2:1b",
         "complexity": {
-            "simple": "llama3:8b",
-            "medium": "llama3:8b",
-            "complex": "llama3:70b"
+            "simple": "llama3.2:1b",
+            "medium": "llama3.2:1b",
+            "complex": "llama3.2:1b"
         }
     }
 }
