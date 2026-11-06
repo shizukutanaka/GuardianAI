@@ -18,8 +18,13 @@ import secrets
 from pathlib import Path
 from typing import Optional
 
-_KEY_DIR = Path(__file__).parent / ".shield_keys"
+from guardian_ai.paths import data_dir
+
 _KEY_BYTES = 32
+
+
+def _key_dir() -> Path:
+    return data_dir() / ".shield_keys"
 
 
 def _env_key(service_name: str) -> Optional[bytes]:
@@ -87,7 +92,7 @@ def _read_key_file(path: Path) -> Optional[bytes]:
 
 
 def _write_key_file(path: Path, key: bytes) -> None:
-    _KEY_DIR.mkdir(parents=True, exist_ok=True)
+    _key_dir().mkdir(parents=True, exist_ok=True)
     blob = _dpapi(key, protect=True) if os.name == "nt" else key
     path.write_bytes(blob)
     if os.name != "nt":
@@ -101,7 +106,7 @@ def get_key(service_name: str) -> bytes:
         return key
 
     safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in service_name)
-    path = _KEY_DIR / f"{safe_name}.key"
+    path = _key_dir() / f"{safe_name}.key"
     key = _read_key_file(path)
     if key is None:
         key = secrets.token_bytes(_KEY_BYTES)

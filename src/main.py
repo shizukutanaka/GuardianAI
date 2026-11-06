@@ -4,6 +4,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from guardian_ai.compliance import audit_integrity, redact
 from guardian_ai.db import init_database, audit_log, record_tasks
 from guardian_ai.executor import Executor
 from guardian_ai.router import Router
@@ -26,9 +27,31 @@ Tip: paste log/contract text or a local file path into the request.
 
 HELP = """Commands:
   <request>   classify -> plan -> execute (100% local) -> audit
+  history     show the 10 most recent audit entries
+  status      show audit integrity and queue stats
   help        show this message
   quit        exit
 """
+
+
+def show_history(conn) -> None:
+    rows = conn.execute(
+        "SELECT id, agent, substr(request, 1, 60), timestamp "
+        "FROM audit_logs ORDER BY id DESC LIMIT 10").fetchall()
+    if not rows:
+        print("(no audit entries)")
+        return
+    for row in reversed(rows):
+        print(f"  #{row[0]} [{row[1]}] {row[3]}  {row[2]}")
+
+
+def show_status(conn) -> None:
+    audit = audit_integrity()
+    agents = conn.execute("SELECT COUNT(*) FROM agents").fetchone()[0]
+    queued = conn.execute("SELECT status, COUNT(*) FROM task_queue GROUP BY status").fetchall()
+    print(f"audit_logs: {audit.get('audit_entries', '?')} entries, integrity={audit.get('quick_check', audit.get('reason'))}")
+    print(f"agents: {agents}")
+    print("task_queue:", ", ".join(f"{s}={n}" for s, n in queued) or "empty")
 
 
 def show_result(result: dict, entry_id: int) -> None:
@@ -73,11 +96,19 @@ def main() -> None:
             if cmd == "help":
                 print(HELP)
                 continue
+            if cmd == "history":
+                show_history(conn)
+                continue
+            if cmd == "status":
+                show_status(conn)
+                continue
 
             result = router.analyze(user_input)
             result["execution"] = executor.execute(user_input, result)
             record_tasks(conn, result["agent"], result["complexity"], result["tasks"])
-            entry_id = audit_log(conn, result["agent"], user_input, str(result))
+            # Secrets are deleted, not stored: PHI/keys never reach the log.
+            entry_id = audit_log(conn, result["agent"],
+                                 redact(user_input), redact(str(result)))
             show_result(result, entry_id)
     finally:
         conn.close()

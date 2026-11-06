@@ -224,6 +224,15 @@ Total: 9, Passed: 9, Failed: 0
 CLI 動作確認: 契約書リクエスト → obligation 2件抽出・revision verified・audit_logs #31
 ```
 
+## 2026-11-07 残った嘘の除去
+
+- 監査ログに秘密が平文で残る → `compliance.redact()` で `<REDACTED:name>` に置換してから保存 (暗号より削除: 鍵管理不要・漏洩不能)
+- audit_logs が書くだけ読めない → CLI に `history`/`status` コマンド
+- `deploy.py --deploy` が存在しない build/twine 前提 → `zipapp` で `dist/shieldai.pyz` (単一ファイル・依存0・クラウドなし)
+- zipapp 内で DB が書けない → `paths.py`: ソースツリーでは従来通り、zipapp では `~/.shieldai/`、`SHIELDAI_DATA_DIR` で上書き可
+- `model_selector.json` が装飾 → `RouterConfig` が実際に読む
+- 検証: 9/9 PASS、pyz は別cwdから起動・新DB作成・status 動作確認
+
 ---
 
 Generated: 2026-11-01 / Updated: 2026-11-07

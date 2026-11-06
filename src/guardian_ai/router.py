@@ -1,8 +1,12 @@
 """Agent Router: ユーザー要求を解析し、適切な Agent を選択"""
 
+import json
 from enum import Enum
+from pathlib import Path
 
 from guardian_ai.first_principles import FirstPrinciples
+
+_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "model_selector.json"
 
 
 class AgentType(Enum):
@@ -17,14 +21,23 @@ class AgentType(Enum):
 
 
 class RouterConfig:
-    def __init__(self):
-        self.model_map = {"8b": ["llama3:8b"], "32b": ["llama3:70b"]}
+    """Model selection. Reads config/model_selector.json when present."""
+
+    def __init__(self, config_path=None):
         self.default_model = "llama3:8b"
+        self.complexity_map = {"simple": "llama3:8b",
+                               "medium": "llama3:8b",
+                               "complex": "llama3:70b"}
+        path = Path(config_path) if config_path else _CONFIG_PATH
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))["model_selector"]
+            self.default_model = data.get("default", self.default_model)
+            self.complexity_map.update(data.get("complexity", {}))
+        except (OSError, KeyError, ValueError):
+            pass  # no config file or malformed -> defaults are the truth
 
     def select_model(self, complexity):
-        if complexity == "complex":
-            return self.model_map["32b"][0]
-        return self.model_map["8b"][0]
+        return self.complexity_map.get(complexity, self.default_model)
 
 
 class Router:

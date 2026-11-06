@@ -1,8 +1,9 @@
 """ShieldAI Database - SQLite schema and initialization"""
 import sqlite3
-import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "shield_ai.db")
+from guardian_ai.paths import data_dir
+
+DB_PATH = str(data_dir() / "shield_ai.db")
 
 AGENTS = [
     ("accounting", "llama3:8b"),

@@ -1,31 +1,56 @@
 #!/usr/bin/env python3
-"""ShieldAI Deployment Script"""
+"""ShieldAI deployment script.
+
+  --test    run the full test suite (gate for --deploy)
+  --deploy  build dist/shieldai.pyz - a single-file zipapp of src/.
+            Local-first: no PyPI, no twine, no cloud. Run it with
+            `python dist/shieldai.pyz`.
+"""
 import subprocess
 import sys
+import zipapp
+from pathlib import Path
 
-def main():
+ROOT = Path(__file__).parent.resolve()
+SRC = ROOT / "src"
+DIST = ROOT / "dist"
+
+
+def run_tests() -> bool:
+    result = subprocess.run([sys.executable, str(SRC / "test_auto.py")])
+    return result.returncode == 0
+
+
+def _zipapp_filter(path: Path) -> bool:
+    parts = set(path.parts)
+    if parts & {"__pycache__", ".shield_keys", "test_files", "test_reports"}:
+        return False
+    return not path.name.endswith((".db", ".db-journal", ".pyc", ".pyo", ".key"))
+
+
+def build() -> bool:
+    DIST.mkdir(exist_ok=True)
+    target = DIST / "shieldai.pyz"
+    zipapp.create_archive(SRC, target=str(target), main="main:main",
+                          filter=_zipapp_filter, compressed=True)
+    print(f"[OK] built {target} ({target.stat().st_size} bytes)")
+    print(f"     run: {sys.executable} {target}")
+    return True
+
+
+def main() -> None:
     if len(sys.argv) > 1 and sys.argv[1] == "--test":
-        result = subprocess.run(["python", "src/test_auto.py", "--all"], capture_output=True, text=True)
-        if result.returncode == 0:
-            print("✓ Pre-deployment tests passed")
-        else:
-            print("✗ Pre-deployment tests failed")
+        ok = run_tests()
+        print("[OK] Pre-deployment tests passed" if ok else "[FAIL] Pre-deployment tests failed")
+        sys.exit(0 if ok else 1)
+    if len(sys.argv) > 1 and sys.argv[1] == "--deploy":
+        if not run_tests():
+            print("[FAIL] tests failed - refusing to deploy")
             sys.exit(1)
-    elif len(sys.argv) > 1 and sys.argv[1] == "--deploy":
-        print("Deploying ShieldAI...")
-        result = subprocess.run(["python", "-m", "build"], capture_output=True, text=True)
-        if result.returncode == 0:
-            result = subprocess.run(["python", "-m", "twine", "upload", "dist/*"], capture_output=True, text=True)
-            if result.returncode == 0:
-                print("✓ Deployment successful")
-            else:
-                print("✗ Upload failed:", result.stderr)
-                sys.exit(1)
-        else:
-            print("✗ Build failed:", result.stderr)
-            sys.exit(1)
-    else:
-        print("Usage: python deploy.py [--test|--deploy]")
+        build()
+        return
+    print(__doc__)
+
 
 if __name__ == "__main__":
     main()

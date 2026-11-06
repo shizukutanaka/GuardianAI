@@ -14,11 +14,13 @@ import re
 import sqlite3
 from typing import Any, Dict, List
 
-_DB_PATH = os.path.join(os.path.dirname(__file__), "shield_ai.db")
+from guardian_ai.db import DB_PATH as _DB_PATH
 
 # Patterns that suggest secrets or regulated identifiers in free text.
 _SENSITIVE_PATTERNS = [
-    ("private_key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
+    ("private_key", re.compile(
+        r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----"
+        r"|-----BEGIN [A-Z ]*PRIVATE KEY-----")),
     ("aws_access_key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
     ("api_key", re.compile(r"\b(sk|pk|key|api)[-_][A-Za-z0-9]{16,}\b", re.I)),
     ("jwt", re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}\b")),
@@ -33,6 +35,18 @@ def scan_sensitive(text: str) -> List[str]:
         if pattern.search(text or ""):
             findings.append(name)
     return findings
+
+
+def redact(text: str) -> str:
+    """Replace sensitive-pattern spans with <REDACTED:name>.
+
+    For an audit trail, deleting the secret beats encrypting it: there is
+    no key to manage and nothing left to leak.
+    """
+    out = text or ""
+    for name, pattern in _SENSITIVE_PATTERNS:
+        out = pattern.sub(f"<REDACTED:{name}>", out)
+    return out
 
 
 def audit_integrity(db_path: str = _DB_PATH) -> Dict[str, Any]:
@@ -83,4 +97,4 @@ def check_compliance(data: Any = None) -> Dict[str, Any]:
     return {"status": status, "checks": checks}
 
 
-__all__ = ["check_compliance", "scan_sensitive", "audit_integrity"]
+__all__ = ["check_compliance", "scan_sensitive", "audit_integrity", "redact"]
