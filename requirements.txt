@@ -1,23 +1,16 @@
-# Guardian AI - Privacy-First Enterprise Agent Platform
-# Requirements
+# ShieldAI - requirements
+# First principles: only what the code actually imports.
+#
+# Runtime: cryptography is the ONLY hard dependency.
+# router / first_principles / executor / ollama client / compliance /
+# db / kms / paths are stdlib-only.
 
-# Core
-python>=3.11,<3.12
-numpy>=1.24.0
+python>=3.11
+cryptography>=41,<46
 
-# LLM (optional, for actual inference)
-llama-cpp-python>=0.2.0
-
-# MCP (optional)
-mcp>=1.0.0
-
-# Testing
-pytest>=7.0.0
-
-# Development
-black>=23.0.0
-isort>=5.12.0
-mypy>=1.5.0
-
-# Encryption
-cryptography>=41.0.0
+# Optional, install only if you wire them up:
+#   llama-cpp-python>=0.2.0   # in-process LLM (needs C++ toolchain)
+#   numpy>=1.24.0             # vector/embedding work
+#   mcp>=1.0.0                # MCP integrations
+#
+# Dev tools are in requirements-dev.txt

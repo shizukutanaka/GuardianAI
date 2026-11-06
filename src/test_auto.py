@@ -128,6 +128,18 @@ def test():
     req3 = "カルテ確認 -----BEGIN RSA PRIVATE KEY----- test"
     out3 = ex.execute(req3, router.analyze(req3))
     assert out3['status'] == 'blocked'
+
+    # ingestion: bare filename resolved under search_root via LocalSearch
+    import os, tempfile
+    with tempfile.TemporaryDirectory() as td:
+        fp = os.path.join(td, 'server_log.txt')
+        with open(fp, 'w', encoding='utf-8') as f:
+            f.write('ERROR 2026-11-07T01:00:00 disk full on db01')
+        req4 = "サーバー障害分析 server_log.txt"
+        out4 = Executor(search_root=td).execute(req4, router.analyze(req4))
+        assert out4['status'] == 'done'
+        assert len(out4['files']) == 1
+        assert any(e['kind'] == 'error' for e in out4['evidence'])
 """ + FOOTER,
 
     "ollama": HEADER + """

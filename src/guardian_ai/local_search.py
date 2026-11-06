@@ -53,6 +53,16 @@ class LocalSearch:
                         results.append(os.path.join(root, file))
         return results
 
+    def find_file(self, name: str) -> List[str]:
+        """ファイル名 (ベース名) で検索し、一致したフルパスを返す。"""
+        results = []
+        for root, dirs, files in os.walk(self.root_path):
+            dirs[:] = [d for d in dirs if not self._is_excluded(d)]
+            for file in files:
+                if file == name and not self._is_excluded(file):
+                    results.append(os.path.join(root, file))
+        return results
+
     def search_text(self, pattern: str, file: str, encoding: str = "utf-8") -> List[Dict[str, Any]]:
         """ファイル内テキスト検索"""
         try:

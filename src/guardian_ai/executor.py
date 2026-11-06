@@ -11,6 +11,7 @@ Every step is 100% local and verifiable:
 If a medical request contains PHI-shaped patterns, execution is blocked
 before extraction - the agent's own first principle, enforced in code.
 """
+import os
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -78,23 +79,48 @@ def _sentences(text: str) -> List[str]:
     return [s.strip() for s in _SENTENCE_SPLIT.split(text) if s.strip()]
 
 
-def _find_local_files(request: str) -> List[Path]:
-    files = []
+def _find_local_files(request: str, root: Optional[Path] = None) -> List[Path]:
+    """Resolve local files referenced in the request.
+
+    Direct paths are checked first; a bare filename (e.g. 'server.py') is
+    then located under `root` via LocalSearch with the same exclusions.
+    """
+    from guardian_ai.local_search import LocalSearch
+
+    root = Path(root) if root else Path.cwd()
+    files: List[Path] = []
+    seen = set()
+    searcher = None
     for token in re.findall(r"[^\s\"'、。，,()（）「」『』]+", request):
         token = token.strip("<>[]{}:;|")
         if not token or "." not in token:
             continue
         p = Path(token)
         if not p.is_absolute():
-            p = Path.cwd() / p
+            p = root / p
         try:
             if p.is_file() and 0 < p.stat().st_size <= MAX_FILE_BYTES:
-                files.append(p)
+                if p.resolve() not in seen:
+                    files.append(p)
+                    seen.add(p.resolve())
+                continue
         except OSError:
             continue
+        if token == os.path.basename(token):
+            searcher = searcher or LocalSearch(str(root))
+            for hit in searcher.find_file(token):
+                hp = Path(hit)
+                try:
+                    ok = hp.is_file() and 0 < hp.stat().st_size <= MAX_FILE_BYTES
+                except OSError:
+                    ok = False
+                if ok and hp.resolve() not in seen:
+                    files.append(hp)
+                    seen.add(hp.resolve())
+                    break
         if len(files) >= MAX_FILES:
             break
-    return files
+    return files[:MAX_FILES]
 
 
 def _read_text(path: Path) -> str:
@@ -198,8 +224,10 @@ class Executor:
     output is always labelled as model inference, not fact.
     """
 
-    def __init__(self, llm: Optional[OllamaClient] = None):
+    def __init__(self, llm: Optional[OllamaClient] = None,
+                 search_root: Optional[str] = None):
         self.llm = llm if llm is not None else OllamaClient()
+        self.search_root = search_root or os.getcwd()
 
     def _llm_synthesize(self, request: str, model: str,
                         evidence: List[Dict[str, str]],
@@ -224,7 +252,7 @@ class Executor:
         steps: List[Dict[str, str]] = []
 
         # --- step 1: ingestion -------------------------------------------
-        files = _find_local_files(request)
+        files = _find_local_files(request, self.search_root)
         corpus_parts = [request]
         read_files: List[Path] = []
         for p in files:

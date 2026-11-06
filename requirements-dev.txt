@@ -1,0 +1,6 @@
+# Dev-only tools (not needed to run ShieldAI)
+pytest>=7.0.0
+black>=23.0.0
+isort>=5.12.0
+mypy>=1.5.0
+bandit>=1.7.0
