@@ -1,6 +1,7 @@
 """ShieldAI CLI - classify requests, execute first-principles plans, audit everything."""
 import os
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -40,13 +41,14 @@ HELP = """Commands:
 
 def show_history(conn) -> None:
     rows = conn.execute(
-        "SELECT id, agent, substr(request, 1, 60), timestamp "
+        "SELECT id, agent, substr(request, 1, 60), timestamp, latency_ms "
         "FROM audit_logs ORDER BY id DESC LIMIT 10").fetchall()
     if not rows:
         print("(no audit entries)")
         return
     for row in reversed(rows):
-        print(f"  #{row[0]} [{row[1]}] {row[3]}  {row[2]}")
+        lat = f"  {row[4]}ms" if row[4] is not None else ""
+        print(f"  #{row[0]} [{row[1]}] {row[3]}{lat}  {row[2]}")
 
 
 def show_status(conn, executor) -> None:
@@ -139,12 +141,15 @@ def main() -> None:
                 continue
 
             result = router.analyze(user_input)
+            t0 = time.monotonic()
             result["execution"] = executor.execute(user_input, result)
+            latency_ms = int((time.monotonic() - t0) * 1000)
             record_tasks(conn, result["agent"], result["complexity"],
                          result["tasks"], result["execution"].get("steps"))
             # Secrets are deleted, not stored: PHI/keys never reach the log.
             entry_id = audit_log(conn, result["agent"],
-                                 redact(user_input), redact(str(result)))
+                                 redact(user_input), redact(str(result)),
+                                 latency_ms=latency_ms)
             show_result(result, entry_id)
     finally:
         conn.close()

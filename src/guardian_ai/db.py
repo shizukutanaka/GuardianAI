@@ -41,6 +41,7 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
             request TEXT NOT NULL,
             result TEXT NOT NULL,
             timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+            latency_ms INTEGER,
             chain_hash TEXT,
             FOREIGN KEY (agent) REFERENCES agents (name)
         )
@@ -159,6 +160,9 @@ def _migrate_chain_hash(conn: sqlite3.Connection) -> None:
     if "chain_hash" not in cols:
         conn.execute("ALTER TABLE audit_logs ADD COLUMN chain_hash TEXT")
         conn.commit()
+    if "latency_ms" not in cols:
+        conn.execute("ALTER TABLE audit_logs ADD COLUMN latency_ms INTEGER")
+        conn.commit()
 
 
 def _backfill_chain(conn: sqlite3.Connection) -> None:
@@ -209,7 +213,8 @@ def _resync_chain_state(conn: sqlite3.Connection) -> None:
     _update_chain_state(conn)
 
 
-def audit_log(conn: sqlite3.Connection, agent: str, request: str, result: str) -> int:
+def audit_log(conn: sqlite3.Connection, agent: str, request: str,
+              result: str, latency_ms: int = None) -> int:
     """Append one entry to audit_logs, commit, and return its row id."""
     prev_row = conn.execute(
         "SELECT chain_hash FROM audit_logs ORDER BY id DESC LIMIT 1").fetchone()
@@ -217,8 +222,9 @@ def audit_log(conn: sqlite3.Connection, agent: str, request: str, result: str) -
     ts = conn.execute("SELECT CURRENT_TIMESTAMP").fetchone()[0]
     h = _chain_hash(prev, agent, request, result, ts)
     cur = conn.execute(
-        "INSERT INTO audit_logs (agent, request, result, timestamp, chain_hash) "
-        "VALUES (?, ?, ?, ?, ?)", (agent, request, result, ts, h))
+        "INSERT INTO audit_logs (agent, request, result, timestamp, "
+        "latency_ms, chain_hash) VALUES (?, ?, ?, ?, ?, ?)",
+        (agent, request, result, ts, latency_ms, h))
     conn.commit()
     _update_chain_state(conn)
     return cur.lastrowid
