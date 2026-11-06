@@ -93,4 +93,31 @@ def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
     conn.commit()
 
 
-__all__ = ["init_database", "audit_log", "record_tasks", "DB_PATH"]
+def export_audit(conn: sqlite3.Connection, limit: int = 100,
+                 out_dir: str = None) -> str:
+    """Export the newest `limit` audit entries as an AES-256-GCM file.
+
+    Requires the `cryptography` package. Returns the .enc file path.
+    """
+    import json
+    from datetime import datetime
+    from pathlib import Path
+
+    from guardian_ai.encryption import Encryption
+
+    rows = conn.execute(
+        "SELECT id, agent, request, result, timestamp FROM audit_logs "
+        "ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    payload = json.dumps(
+        [{"id": r[0], "agent": r[1], "request": r[2],
+          "result": r[3], "timestamp": r[4]} for r in rows],
+        ensure_ascii=False, indent=2)
+    blob = Encryption().encrypt(payload)
+
+    directory = Path(out_dir) if out_dir else Path(DB_PATH).parent
+    path = directory / f"audit_export_{datetime.now():%Y%m%d_%H%M%S}.enc"
+    path.write_text(blob, encoding="utf-8")
+    return str(path)
+
+
+__all__ = ["init_database", "audit_log", "record_tasks", "export_audit", "DB_PATH"]

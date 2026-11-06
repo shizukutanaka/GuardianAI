@@ -1,11 +1,12 @@
 """ShieldAI CLI - classify requests, execute first-principles plans, audit everything."""
 import os
 import sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from guardian_ai.compliance import audit_integrity, redact
-from guardian_ai.db import init_database, audit_log, record_tasks
+from guardian_ai.db import init_database, audit_log, export_audit, record_tasks
 from guardian_ai.executor import Executor
 from guardian_ai.router import Router
 
@@ -26,11 +27,13 @@ Tip: paste log/contract text or a local file path into the request.
 """
 
 HELP = """Commands:
-  <request>   classify -> plan -> execute (100% local) -> audit
-  history     show the 10 most recent audit entries
-  status      show audit integrity and queue stats
-  help        show this message
-  quit        exit
+  <request>     classify -> plan -> execute (100% local) -> audit
+  history       show the 10 most recent audit entries
+  status        show audit integrity and queue stats
+  export        write the newest 100 audit entries to an encrypted .enc file
+  decrypt FILE  decrypt an .enc export with the local KMS key
+  help          show this message
+  quit          exit
 """
 
 
@@ -101,6 +104,20 @@ def main() -> None:
                 continue
             if cmd == "status":
                 show_status(conn)
+                continue
+            if cmd == "export":
+                try:
+                    print(f"exported: {export_audit(conn)}")
+                except RuntimeError as e:
+                    print(f"export failed: {e}")
+                continue
+            if cmd.startswith("decrypt "):
+                target = Path(user_input[8:].strip())
+                try:
+                    from guardian_ai.encryption import Encryption
+                    print(Encryption().decrypt(target.read_text(encoding="utf-8")))
+                except Exception as e:
+                    print(f"decrypt failed: {e}")
                 continue
 
             result = router.analyze(user_input)

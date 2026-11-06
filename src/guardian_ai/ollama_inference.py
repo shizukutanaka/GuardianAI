@@ -27,6 +27,7 @@ class OllamaClient:
     def _get(self, path: str, timeout: float) -> Optional[Dict[str, Any]]:
         try:
             req = urllib.request.Request(self.host + path)
+            # nosec B310 - host is localhost/operator-configured local daemon
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read().decode())
         except (OSError, urllib.error.URLError, json.JSONDecodeError):
@@ -38,6 +39,7 @@ class OllamaClient:
             req = urllib.request.Request(
                 self.host + path, data=body,
                 headers={"Content-Type": "application/json"})
+            # nosec B310 - host is localhost/operator-configured local daemon
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return json.loads(resp.read().decode())
         except (OSError, urllib.error.URLError, json.JSONDecodeError):

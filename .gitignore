@@ -30,3 +30,4 @@ skill/
 
 # Ignore Python bytecode
 dist/
+*.enc

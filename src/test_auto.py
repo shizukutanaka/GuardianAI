@@ -162,6 +162,22 @@ def test():
         assert out['status'] == 'done' and out['llm_model'] is None
 """ + FOOTER,
 
+    "export": HEADER + """
+def test():
+    import os, tempfile
+    from guardian_ai.db import init_database, audit_log, export_audit
+    from guardian_ai.encryption import Encryption
+    with tempfile.TemporaryDirectory() as td:
+        conn = init_database(os.path.join(td, 't.db'))
+        audit_log(conn, 'general', 'secret request 42', 'some result')
+        path = export_audit(conn, out_dir=td)
+        raw = open(path, encoding='utf-8').read()
+        assert 'secret request 42' not in raw   # ciphertext on disk
+        dec = Encryption().decrypt(raw)
+        assert 'secret request 42' in dec       # decrypts back
+        conn.close()
+""" + FOOTER,
+
     "compliance": HEADER + """
 def test():
     from guardian_ai.compliance import check_compliance, audit_integrity
