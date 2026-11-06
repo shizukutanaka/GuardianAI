@@ -28,6 +28,10 @@ _SENSITIVE_PATTERNS = [
     ("service_token", re.compile(
         r"\b(ghp_[A-Za-z0-9]{20,}|gho_[A-Za-z0-9]{20,}|glpat-[A-Za-z0-9_-]{10,}|"
         r"xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{20,})\b")),
+    ("eth_private_key", re.compile(r"\b0x[0-9a-fA-F]{64}\b")),
+    ("ssh_fingerprint", re.compile(r"\bSHA256:[A-Za-z0-9+/]{43}\b")),
+    ("generic_token", re.compile(
+        r"\b(?:token|secret|key|authorization|auth)\s*[:=]\s*[A-Za-z0-9._+/=-]{16,}", re.I)),
     ("bearer_token", re.compile(r"bearer\s+[A-Za-z0-9._-]{10,}", re.I)),
     ("password", re.compile(
         r"(?:password|passwd|pwd|secret|パスワード|密码|비밀번호)\s*[:=：]\s*[^\s,;。]{4,}", re.I)),
