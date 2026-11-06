@@ -5,7 +5,8 @@ Every step is 100% local and verifiable:
   ingestion    -> pull local files referenced in the request (size-capped)
   extraction   -> agent-specific deterministic extractors (no LLM, no guessing)
   verification -> check each unknown against the source text; report
-                  "verified" / "unverified" / "needs_human" honestly
+                  "evidence_found" / "evidence_missing" / "needs_human"
+                  honestly (a pattern match is evidence, not proof)
   synthesis    -> compose the answer strictly from extracted evidence
 
 If a medical request contains PHI-shaped patterns, execution is blocked
@@ -177,7 +178,7 @@ def _verify_unknowns(unknowns: List[str], corpus: str) -> List[Dict[str, str]]:
         hit = pattern.search(corpus)
         results.append({
             "unknown": unknown,
-            "status": "verified" if hit else "unverified",
+            "status": "evidence_found" if hit else "evidence_missing",
             "detail": f"{label}: {'found in source' if hit else 'not found in provided material'}",
         })
     return results
@@ -202,12 +203,12 @@ def _synthesize(agent: str, files: List[Path], evidence: List[Dict[str, str]],
             lines.append(f"  - ... 他 {len(evidence) - 3} 件")
     else:
         lines.append("抽出: ソース内に agent 固有のパターンは検出されませんでした")
-    verified = sum(1 for v in verification if v["status"] == "verified")
-    lines.append(f"検証: unknowns {len(verification)} 件中 {verified} 件をソースで確認")
+    found = sum(1 for v in verification if v["status"] == "evidence_found")
+    lines.append(f"照合: unknowns {len(verification)} 件中 {found} 件に証拠パターンを検出")
     for v in verification:
-        if v["status"] != "verified":
+        if v["status"] != "evidence_found":
             lines.append(f"  - [{v['status']}] {v['unknown']}")
-    lines.append("注: 上記は決定論的ローカル処理の検証済み結果です。")
+    lines.append("注: 上記は決定論的ローカル処理のパターン照合結果です(検証ではありません)。")
     return "\n".join(lines)
 
 
@@ -219,7 +220,7 @@ _LLM_SYSTEM = (
 _LLM_PROMPT = (
     "あなたのタスクは、提供された証拠のみに基づく要約です。\n\n"
     "依頼: {request}\n\n"
-    "証拠 (ローカル検証済み):\n{evidence}\n\n"
+    "証拠 (ローカル抽出・パターン照合済):\n{evidence}\n\n"
     "未検証の項目:\n{unknowns}\n\n"
     "出力形式:\n"
     "- 箇条書きで最大3点\n"
@@ -232,7 +233,7 @@ class Executor:
     """Executes a Router.analyze() result through the plan steps.
 
     A local Ollama daemon, when reachable, only fills in the synthesis step
-    using verified evidence - it never touches ingestion/extraction and its
+    using extracted evidence - it never touches ingestion/extraction and its
     output is always labelled as model inference, not fact.
     """
 
@@ -304,8 +305,8 @@ class Executor:
         # --- step 3: verification ----------------------------------------
         verification = _verify_unknowns(unknowns, corpus)
         steps.append({"step": "verification", "status": "ok",
-                      "detail": f"{sum(1 for v in verification if v['status'] == 'verified')}/"
-                                f"{len(verification)} verified"})
+                      "detail": f"{sum(1 for v in verification if v['status'] == 'evidence_found')}/"
+                                f"{len(verification)} evidence_found"})
 
         # --- step 4: synthesis -------------------------------------------
         answer = _synthesize(agent, read_files, evidence, verification)

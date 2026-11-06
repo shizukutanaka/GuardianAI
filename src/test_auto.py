@@ -121,7 +121,7 @@ def test():
     out = ex.execute(req, router.analyze(req))
     assert out['status'] == 'done', out.get('reason')
     assert any(e['kind'] == 'obligation' for e in out['evidence'])
-    assert any(v['status'] == 'verified' for v in out['verification'])
+    assert any(v['status'] == 'evidence_found' for v in out['verification'])
     assert 'ローカル解析結果' in out['answer']
 
     # it: pasted log line
