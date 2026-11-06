@@ -311,11 +311,21 @@ def export_audit(conn: sqlite3.Connection, limit: int = 100,
     from guardian_ai.encryption import Encryption
 
     rows = conn.execute(
-        "SELECT id, agent, request, result, timestamp FROM audit_logs "
-        "ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+        "SELECT id, agent, request, result, timestamp, chain_hash "
+        "FROM audit_logs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    state = conn.execute(
+        "SELECT row_count, head, state_hmac FROM chain_state "
+        "WHERE id = 1").fetchone()
+    # Anchor: embedding the signed chain head lets a stored export prove
+    # the DB state at export time - an attacker who later rolls back
+    # audit rows + chain_state cannot alter this file (AES-GCM, key kept
+    # outside the DB), so the rollback becomes detectable.
     payload = json.dumps(
-        [{"id": r[0], "agent": r[1], "request": r[2],
-          "result": r[3], "timestamp": r[4]} for r in rows],
+        {"chain_state": {"row_count": state[0], "head": state[1],
+                         "state_hmac": state[2]} if state else None,
+         "entries": [{"id": r[0], "agent": r[1], "request": r[2],
+                      "result": r[3], "timestamp": r[4],
+                      "chain_hash": r[5]} for r in rows]},
         ensure_ascii=False, indent=2)
     blob = Encryption().encrypt(payload)
 
