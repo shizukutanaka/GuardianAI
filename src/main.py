@@ -130,7 +130,8 @@ def main() -> None:
 
             result = router.analyze(user_input)
             result["execution"] = executor.execute(user_input, result)
-            record_tasks(conn, result["agent"], result["complexity"], result["tasks"])
+            record_tasks(conn, result["agent"], result["complexity"],
+                         result["tasks"], result["execution"].get("steps"))
             # Secrets are deleted, not stored: PHI/keys never reach the log.
             entry_id = audit_log(conn, result["agent"],
                                  redact(user_input), redact(str(result)))

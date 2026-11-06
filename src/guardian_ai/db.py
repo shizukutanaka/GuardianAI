@@ -146,15 +146,24 @@ def verify_audit_chain(conn: sqlite3.Connection) -> dict:
 
 
 def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
-                 steps: list) -> None:
-    """Persist a plan's steps into tasks + task_queue (status=done)."""
+                 steps: list, execution_steps: list = None) -> None:
+    """Persist plan steps into tasks + task_queue.
+
+    `execution_steps` (Executor's step outcomes) supply real statuses;
+    without them every step is assumed 'done'."""
     priority = "high" if complexity == "complex" else "medium"
+    normalize = {"ok": "done", "fail": "failed", "blocked": "blocked"}
+    status_by_type = {}
+    for s in execution_steps or []:
+        status_by_type.setdefault(
+            s.get("step"), normalize.get(s.get("status"), "done"))
     for step in steps:
+        status = status_by_type.get(step.get("type"), "done")
         cur = conn.execute(
             "INSERT INTO tasks (agent, priority) VALUES (?, ?)", (agent, priority))
         conn.execute(
             "INSERT INTO task_queue (task_id, agent, status, priority) "
-            "VALUES (?, ?, 'done', ?)", (cur.lastrowid, agent, priority))
+            "VALUES (?, ?, ?, ?)", (cur.lastrowid, agent, status, priority))
     conn.commit()
 
 
