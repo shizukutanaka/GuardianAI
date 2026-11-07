@@ -429,6 +429,16 @@ class _Handler(BaseHTTPRequestHandler):
         if self.path != "/api/request":
             self._send(404, json.dumps({"error": "not found"}))
             return
+        # CSRF: a website open in the user's browser could try to drive
+        # the local daemon (application/json triggers a preflight that
+        # fails, but defence in depth demands an explicit check). Reject
+        # any request whose Origin is not this server; curl/CLI clients
+        # send no Origin and are unaffected.
+        origin = self.headers.get("Origin", "")
+        if origin and not origin.startswith(("http://127.0.0.1",
+                                             "http://localhost")):
+            self._send(403, json.dumps({"error": "foreign origin"}))
+            return
         try:
             length = int(self.headers.get("Content-Length", 0))
             # Requests are short text - an unbounded read() would let a
