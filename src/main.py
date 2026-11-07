@@ -250,6 +250,12 @@ def main() -> None:
                 # raw file copy, which can catch a mid-write page) - the
                 # audit trail can be archived without weakening it.
                 json_out = cmd.endswith("--json")
+                # same gate as export - warn before archiving a
+                # compromised trail, don't silently snapshot broken data.
+                broken = not verify_audit_chain(conn).get("ok")
+                if broken and not json_out:
+                    print("WARNING: audit chain is broken - this backup "
+                          "captures compromised data")
                 try:
                     from guardian_ai.paths import data_dir
                     from datetime import datetime
@@ -265,7 +271,8 @@ def main() -> None:
                         old.unlink()
                     if json_out:
                         import json as _json
-                        print(_json.dumps({"path": str(dst)},
+                        print(_json.dumps({"path": str(dst),
+                                           "chain_broken": broken},
                                           ensure_ascii=False))
                     else:
                         print(f"backup: {dst}")
