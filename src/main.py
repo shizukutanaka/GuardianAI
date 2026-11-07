@@ -274,8 +274,12 @@ def main() -> None:
                 # 'decrypt --json FILE' returns the same verification as
                 # JSON for automation (completes the --json surface).
                 json_out = "--json" in user_input.split()
-                target = Path([p for p in user_input.split()[1:]
-                               if p != "--json"][-1].strip())
+                files = [p for p in user_input.split()[1:]
+                         if p != "--json"]
+                if not files:
+                    print("usage: decrypt [--json] FILE")
+                    continue
+                target = Path(files[-1].strip())
                 try:
                     import json as _json
                     from guardian_ai.db import _state_hmac, _chain_hash
