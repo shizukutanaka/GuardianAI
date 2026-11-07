@@ -366,8 +366,10 @@ async function submit(){
 async function doVerify(){
   try{
     const v=await J('/api/verify');
+    // forged tasks / missing chain_state have broken_at=null - '#null'
+    // would be a wrong display, so the reason alone carries those.
     toast(v.ok?`chain ok - ${v.entries} entries verified (HMAC + chain_state)`
-             :`chain BROKEN at #${v.broken_at}`,
+             :`chain BROKEN${v.broken_at!=null?' at #'+v.broken_at:''}`,
           v.ok?'':v.reason||'');
   }catch(e){toast('verify failed',e.message)}
 }
