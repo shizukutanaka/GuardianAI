@@ -31,6 +31,7 @@ Tip: paste log/contract text or a local file path into the request.
 HELP = """Commands:
   <request>     classify -> plan -> execute (100% local) -> audit
   history [N]   show the N most recent audit entries (default 10)
+  tasks         list the work record (task_queue + tasks, latest 20)
   status        show audit integrity and queue stats
   status --json machine-readable status (audit_integrity as JSON)
   verify --json machine-readable chain verify (ok/broken/forged as JSON)
@@ -172,6 +173,27 @@ def main() -> None:
             if cmd == "ui":
                 from guardian_ai.webui import serve
                 serve()  # blocks until Ctrl+C; returns here on exit
+                continue
+            if cmd == "tasks" or cmd == "tasks --json":
+                # parity with the Web UI tasks tab - the work record is
+                # not viewable from the CLI without this command.
+                rows = conn.execute(
+                    "SELECT q.status, q.agent, t.description, "
+                    "q.created_at FROM task_queue q "
+                    "JOIN tasks t ON q.task_id = t.id "
+                    "ORDER BY q.id DESC LIMIT 20").fetchall()
+                if cmd.endswith("--json"):
+                    import json as _json
+                    print(_json.dumps(
+                        [{"status": r[0], "agent": r[1],
+                          "description": r[2], "created_at": r[3]}
+                         for r in rows], ensure_ascii=False))
+                else:
+                    if not rows:
+                        print("no tasks")
+                    for st, ag, desc, ts in rows:
+                        print(f"[{st:8}] {ag:12} {(desc or '')[:50]} "
+                              f"({ts[:16]})")
                 continue
             if cmd == "status --json":
                 # machine-readable status for monitoring/scripting.
