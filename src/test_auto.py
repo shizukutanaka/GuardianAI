@@ -318,6 +318,10 @@ def main():
     }
     report_path = REPORT_DIR / f"report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    # keep only the latest 20 reports - an unbounded folder would repeat
+    # the same disk-fill problem as unbounded backups/exports.
+    for old in sorted(REPORT_DIR.glob("report_*.json"))[:-20]:
+        old.unlink()
     print(f"\n[OK] Report saved to {report_path}")
 
 
