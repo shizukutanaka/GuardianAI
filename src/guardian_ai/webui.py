@@ -395,13 +395,35 @@ refresh();setInterval(refresh,10000);
 
 
 def _status_payload(conn, executor):
-    audit = audit_integrity()
-    chain = audit.get("chain", {})
+    """Ambient health for the polling badge. The full chain walk is O(n)
+    in entries, so running it every 10s poll gets expensive as the chain
+    grows - the badge only needs a cheap tip check (last row's chain_hash
+    must equal the signed chain_state head + count). /api/verify still
+    does the full re-verification on demand."""
+    state = conn.execute(
+        "SELECT row_count, head, state_hmac FROM chain_state "
+        "WHERE id = 1").fetchone()
+    last = conn.execute(
+        "SELECT COUNT(*), MAX(chain_hash) FROM "
+        "(SELECT chain_hash FROM audit_logs ORDER BY id DESC LIMIT 1)"
+    ).fetchone()
+    count = conn.execute("SELECT COUNT(*) FROM audit_logs").fetchone()[0]
+    tip_ok = (bool(state) and count == state[0]
+              and (last[1] or "") == (state[1] or ""))
+    chain = {"ok": tip_ok, "entries": count,
+             "tip": "chain_state head matches last row" if tip_ok
+                    else "tip/state mismatch - run verify"}
     ollama = executor.llm
-    return {"audit_entries": audit.get("audit_entries"),
-            "quick_check": audit.get("quick_check"),
+    return {"audit_entries": count,
+            "quick_check": conn.execute("PRAGMA quick_check").fetchone()[0],
             "chain": chain,
-            "triggers_missing": chain.get("triggers_missing", []),
+            "triggers_missing": [t for t in (
+                "audit_no_update", "audit_no_delete",
+                "queue_no_update", "queue_no_delete",
+                "tasks_no_update", "tasks_no_delete")
+                if t not in {r[0] for r in conn.execute(
+                    "SELECT name FROM sqlite_master "
+                    "WHERE type='trigger'")}],
             "agents": conn.execute("SELECT COUNT(*) FROM agents").fetchone()[0],
             "ollama_up": bool(ollama and ollama.available()),
             "models": (ollama.models() if ollama and ollama.available()
