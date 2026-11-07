@@ -1,12 +1,20 @@
 # ShieldAI Commercial License — DRAFT for legal review
 
 > **Status: proposal, not effective.** This is a working draft for the
-> business decision on how ShieldAI is sold. It is not legal advice and
+> business decision on how ShieldAI is funded. It is not legal advice and
 > must be reviewed by counsel before any repo license file is changed.
-> The repo currently carries **no LICENSE file at all** — that itself is
-> a decision that needs making.
 
-## The decision being made
+## DECIDED (2026-11-08): donation model
+
+- **Distribution: MIT** (already declared in README) — code stays open.
+- **Funding: GitHub Sponsors only** (`.github/FUNDING.yml`) — no license
+  sales, no paid tiers required to use the product.
+- `licensing.py` remains for the optional enterprise/support path —
+  a signed license file still verifies offline, but "no license" is the
+  normal community state, not a fault (UI shows `community`, CLI prints
+  `community edition`).
+
+## The decision that remains
 
 The product's core claim is *"a tamper-evident audit trail you can
 verify yourself."* That claim is most credible when customers can read
@@ -43,9 +51,7 @@ model — code stays visible, commercial use requires a license:
 
 ## What remains undecided (needs the owner)
 
-- [ ] Exact license form (BSL text vs custom EULA)
-- [ ] Price model (perpetual-per-seat? maintenance %?)
-- [ ] Whether existing public history needs relicensing/copyright line
+- [ ] Optional paid support/enterprise tier terms (if ever offered)
 - [ ] Company name for the license grant
-- [ ] Support channel + SLA terms
-- [ ] Change-to-OSS date, if any
+- [ ] Support channel + SLA terms (if paid support is added)
+- [ ] Code-signing certificate purchase (~$200-400/yr)

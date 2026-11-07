@@ -322,7 +322,10 @@ def main() -> None:
                     print(f"licensed to {st['licensee']} - "
                           f"{st.get('seats')} seat(s){exp}")
                 else:
-                    print(f"unlicensed: {st['reason']}")
+                    # donation model: unlicensed is the normal free tier,
+                    # not a fault - say so instead of implying a problem.
+                    print(f"community edition ({st['reason']}) - "
+                          "support: github.com/sponsors/shizukutanaka")
                 continue
             if cmd == "verify":
                 v = verify_audit_chain(conn)

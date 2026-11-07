@@ -1,5 +1,8 @@
 # ShieldAI - Universal AI Control Plane
 
+Free, local-first, donation-supported. If ShieldAI is useful to you:
+[sponsor it on GitHub](https://github.com/sponsors/shizukutanaka).
+
 ## Overview
 ShieldAI is a local-first AI control plane: classify a request, pick an agent,
 build a first-principles task plan, and audit everything. 100% offline - no
@@ -65,9 +68,13 @@ venv/Scripts/python src/test_auto.py
 
 # Deploy: build a single-file zipapp (stdlib-only, no cloud)
 venv/Scripts/python deploy.py --deploy   # -> dist/shieldai.pyz
+# or a standalone exe (no Python needed on the target machine):
+venv/Scripts/python scripts/build_exe.py # -> dist/shieldai.exe + SHA256SUMS.txt
 
-# CLI commands inside main.py:
-#   history, status, export, decrypt FILE, help, quit
+# CLI commands inside main.py (also one-shot: `python src/main.py <command>`):
+#   history [N], tasks, status, verify, forged, export, backup,
+#   decrypt FILE, license [FILE], version, ui, help, quit
+#   most support --json for scripting
 
 # Check health
 python -c "import sqlite3; conn=sqlite3.connect('src/guardian_ai/shield_ai.db'); c=conn.cursor(); c.execute('SELECT COUNT(*) FROM audit_logs'); print('audit_logs:', c.fetchone()[0]); c.execute('PRAGMA integrity_check'); print('integrity:', c.fetchone()[0])"

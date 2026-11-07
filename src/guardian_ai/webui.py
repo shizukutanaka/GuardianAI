@@ -296,8 +296,8 @@ async function refresh(){
         chain.forged_tasks} forged</span>`:'')+
       `<span class="dot ${s.kms_ok===false?'bad':'ok'}"><i></i>${
         s.kms_ok===false?'key missing':'key ok'}</span>`+
-      `<span class="dot ${(s.license||{}).valid?'ok':'warn'}"><i></i>${
-        (s.license||{}).valid?'licensed':'unlicensed'}</span>`+
+      `<span class="dot ${(s.license||{}).valid?'ok':''}"><i></i>${
+        (s.license||{}).valid?'licensed':'community'}</span>`+
       `<span class="dot ${s.ollama_up?'ok':'warn'}"><i></i>${
         s.ollama_up?(s.models[0]||'model'):'deterministic'}</span>`+
       `<span class="dot"><i></i>${s.audit_entries} entries</span>`+
