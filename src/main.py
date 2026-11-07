@@ -162,8 +162,12 @@ def main() -> None:
                     # same warning as text history - the --json variant
                     # must not silently skip the broken-chain signal.
                     broken = not verify_audit_chain(conn).get("ok")
+                    total = conn.execute(
+                        "SELECT COUNT(*) FROM audit_logs").fetchone()[0]
                     print(_json.dumps(
                         {"chain_broken": broken,
+                         "truncated": len(rows) < total,
+                         "total": total,
                          "entries": [{"id": r[0], "agent": r[1],
                                       "request": r[2], "result": r[3],
                                       "timestamp": r[4],
@@ -205,8 +209,12 @@ def main() -> None:
                     import json as _json
                     from guardian_ai.db import _forged_work_records
                     forged = _forged_work_records(conn)
+                    total = conn.execute(
+                        "SELECT COUNT(*) FROM task_queue").fetchone()[0]
                     print(_json.dumps(
                         {"forged_tasks": forged,
+                         "truncated": len(rows) < total,
+                         "total": total,
                          "tasks": [{"status": r[0], "agent": r[1],
                                     "description": r[2],
                                     "created_at": r[3]}
