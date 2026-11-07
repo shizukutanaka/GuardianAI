@@ -209,6 +209,8 @@ def main() -> None:
                 if forged:
                     print(f"WARNING: {forged} forged work-record row(s) - "
                           "invalid signature")
+                total = conn.execute(
+                    "SELECT COUNT(*) FROM task_queue").fetchone()[0]
                 if cmd.endswith("--json"):
                     import json as _json
                     from guardian_ai.db import _forged_work_records
@@ -227,6 +229,10 @@ def main() -> None:
                 else:
                     if not rows:
                         print("no tasks")
+                    elif len(rows) < total:
+                        # say when the view is capped - 20 rows are not
+                        # the whole work record.
+                        print(f"(showing {len(rows)} of {total})")
                     for st, ag, desc, ts in rows:
                         print(f"[{st:8}] {ag:12} {(desc or '')[:50]} "
                               f"({ts[:16]})")
