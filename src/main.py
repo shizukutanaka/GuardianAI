@@ -36,6 +36,7 @@ HELP = """Commands:
   verify --json machine-readable chain verify (ok/broken/forged as JSON)
   history --json [N] machine-readable audit history (latest N as JSON)
   backup --json machine-readable backup path ({path} as JSON)
+  decrypt --json FILE machine-readable decrypt+verify ({ok,entries_ok})
   export        write ALL audit entries + work record to an encrypted .enc file
   backup        snapshot the whole DB to backups/ (consistent VACUUM INTO)
   decrypt FILE  decrypt an .enc export with the local KMS key
@@ -248,41 +249,54 @@ def main() -> None:
                         print(f"backup failed: {e}")
                 continue
             if cmd.startswith("decrypt "):
-                target = Path(user_input[8:].strip())
+                # 'decrypt --json FILE' returns the same verification as
+                # JSON for automation (completes the --json surface).
+                json_out = "--json" in user_input.split()
+                target = Path([p for p in user_input.split()[1:]
+                               if p != "--json"][-1].strip())
                 try:
                     import json as _json
-                    from guardian_ai.db import _state_hmac
+                    from guardian_ai.db import _state_hmac, _chain_hash
                     from guardian_ai.encryption import Encryption
                     raw = Encryption().decrypt(target.read_text(encoding="utf-8"))
                     try:
                         data = _json.loads(raw)
-                        # Verify the embedded signed anchor - without this
-                        # check the chain_state in the export is decorative.
                         st = data.get("chain_state")
-                        if st and st.get("state_hmac") == _state_hmac(
-                                st.get("row_count"), st.get("head")):
-                            print(f"[anchor ok] signed chain_state "
-                                  f"({st['row_count']} entries, head "
-                                  f"{st['head'][:16]}...) - snapshot was "
-                                  f"genuinely signed, not forged")
-                            # Prove the exported entries actually reach
-                            # the signed head - a signed state beside a
-                            # partial/inconsistent entry set is not a
-                            # coherent audit snapshot.
-                            from guardian_ai.db import _chain_hash
+                        anchor_ok = bool(st and st.get("state_hmac")
+                                         == _state_hmac(st.get("row_count"),
+                                                        st.get("head")))
+                        entries_ok = False
+                        if anchor_ok:
                             prev = ""
                             for e in sorted(data["entries"],
                                             key=lambda x: x["id"]):
                                 prev = _chain_hash(
                                     prev, e["agent"], e["request"],
                                     e["result"], e["timestamp"])
-                            if prev == st["head"]:
-                                print("[entries ok] chain over exported "
-                                      "entries reaches the signed head")
-                            else:
-                                print("[entries MISMATCH] exported entries "
-                                      "do not form a chain ending at the "
-                                      "signed head - incomplete snapshot")
+                            entries_ok = prev == st["head"]
+                        if json_out:
+                            print(_json.dumps(
+                                {"ok": anchor_ok and entries_ok,
+                                 "anchor_ok": anchor_ok,
+                                 "entries_ok": entries_ok,
+                                 "entries": len(data.get("entries", [])),
+                                 "reason": None if entries_ok
+                                          else "entries chain mismatch"
+                                                if anchor_ok
+                                                else "anchor signature invalid"},
+                                ensure_ascii=False))
+                            continue
+                        if anchor_ok:
+                            print(f"[anchor ok] signed chain_state "
+                                  f"({st['row_count']} entries, head "
+                                  f"{st['head'][:16]}...) - snapshot was "
+                                  f"genuinely signed, not forged")
+                            print("[entries ok] chain over exported "
+                                  "entries reaches the signed head"
+                                  if entries_ok else
+                                  "[entries MISMATCH] exported entries "
+                                  "do not form a chain ending at the "
+                                  "signed head - incomplete snapshot")
                         elif st:
                             print("[anchor INVALID] chain_state signature "
                                   "mismatch - export may be tampered")
@@ -290,7 +304,8 @@ def main() -> None:
                     except ValueError:
                         print(raw)
                 except Exception as e:
-                    print(f"decrypt failed: {e}")
+                    print(_json.dumps({"error": str(e)}) if json_out
+                          else f"decrypt failed: {e}")
                 continue
 
             result = router.analyze(user_input)
