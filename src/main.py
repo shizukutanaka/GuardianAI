@@ -35,6 +35,7 @@ HELP = """Commands:
   export        write ALL audit entries + work record to an encrypted .enc file
   decrypt FILE  decrypt an .enc export with the local KMS key
   verify        re-run the HMAC audit-chain check explicitly
+  ui            open the local web dashboard (http://127.0.0.1:8765)
   help          show this message
   quit          exit
 """
@@ -141,6 +142,10 @@ def main() -> None:
                 except (IndexError, ValueError):
                     n = 10
                 show_history(conn, max(1, n))
+                continue
+            if cmd == "ui":
+                from guardian_ai.webui import serve
+                serve()  # blocks until Ctrl+C; returns here on exit
                 continue
             if cmd == "status":
                 show_status(conn, executor)
