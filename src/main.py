@@ -56,6 +56,10 @@ def show_history(conn, limit: int = 10) -> None:
     if not rows:
         print("(no audit entries)")
         return
+    # say when the view is capped - N rows are not the whole trail.
+    total = conn.execute("SELECT COUNT(*) FROM audit_logs").fetchone()[0]
+    if len(rows) < total:
+        print(f"(showing {len(rows)} of {total})")
     for row in reversed(rows):
         lat = f"  {row[4]}ms" if row[4] is not None else ""
         print(f"  #{row[0]} [{row[1]}] {row[3]}{lat}  {row[2]}")
