@@ -32,6 +32,7 @@ HELP = """Commands:
   <request>     classify -> plan -> execute (100% local) -> audit
   history [N]   show the N most recent audit entries (default 10)
   status        show audit integrity and queue stats
+  status --json machine-readable status (audit_integrity as JSON)
   export        write ALL audit entries + work record to an encrypted .enc file
   backup        snapshot the whole DB to backups/ (consistent VACUUM INTO)
   decrypt FILE  decrypt an .enc export with the local KMS key
