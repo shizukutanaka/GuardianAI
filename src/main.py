@@ -34,6 +34,7 @@ HELP = """Commands:
   status        show audit integrity and queue stats
   status --json machine-readable status (audit_integrity as JSON)
   verify --json machine-readable chain verify (ok/broken/forged as JSON)
+  history --json machine-readable audit history (latest 50 as JSON)
   export        write ALL audit entries + work record to an encrypted .enc file
   backup        snapshot the whole DB to backups/ (consistent VACUUM INTO)
   decrypt FILE  decrypt an .enc export with the local KMS key
@@ -139,7 +140,22 @@ def main() -> None:
             if cmd == "help":
                 print(HELP)
                 continue
-            if cmd == "history" or cmd.startswith("history "):
+            if cmd == "history --json" or cmd.startswith("history "):
+                # 'history --json' gives the same entries in a machine-
+                # readable form for analysis/scripting (consistent with
+                # status/verify --json).
+                if cmd == "history --json":
+                    import json as _json
+                    rows = conn.execute(
+                        "SELECT id, agent, request, result, timestamp, "
+                        "latency_ms FROM audit_logs ORDER BY id DESC "
+                        "LIMIT 50").fetchall()
+                    print(_json.dumps(
+                        [{"id": r[0], "agent": r[1], "request": r[2],
+                          "result": r[3], "timestamp": r[4],
+                          "latency_ms": r[5]} for r in rows],
+                        ensure_ascii=False))
+                    continue
                 try:
                     n = int(cmd.split()[1]) if cmd != "history" else 10
                 except (IndexError, ValueError):
