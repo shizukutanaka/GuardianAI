@@ -404,7 +404,9 @@ async function doExport(){
       headers:{'Content-Type':'application/json'},
       body:'{}'}).then(r=>r.json());
     window._lastExport=r.path;
-    toast('audit exported',r.path);
+    toast('audit exported',
+      r.chain_broken?'WARNING: audit chain is broken - this export '
+                    'captures compromised data':r.path);
   }catch(e){toast('export failed',e.message)}
 }
 async function doDecrypt(){
@@ -594,8 +596,16 @@ class _Handler(BaseHTTPRequestHandler):
         # trigger exports at will).
         if self.path == "/api/export":
             try:
-                path = export_audit(_conn())
-                self._send(200, json.dumps({"path": path}))
+                conn = _conn()
+                try:
+                    # same gate as the CLI export - never silently snapshot
+                    # a compromised trail (warn that the export is suspect).
+                    broken = not verify_audit_chain(conn).get("ok")
+                    path = export_audit(conn)
+                finally:
+                    _release(conn)
+                self._send(200, json.dumps(
+                    {"path": path, "chain_broken": broken}))
             except RuntimeError as e:
                 self._send(500, json.dumps({"error": str(e)}))
             return
