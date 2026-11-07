@@ -50,8 +50,11 @@ HELP = """Commands:
 
 
 def show_history(conn, limit: int = 10) -> None:
+    # show a snippet of the result too - a request without its outcome
+    # is half an audit view (the user can't see what the agent did).
     rows = conn.execute(
-        "SELECT id, agent, substr(request, 1, 60), timestamp, latency_ms "
+        "SELECT id, agent, substr(request, 1, 50), timestamp, "
+        "latency_ms, substr(result, 1, 50) "
         "FROM audit_logs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     if not rows:
         print("(no audit entries)")
@@ -63,6 +66,7 @@ def show_history(conn, limit: int = 10) -> None:
     for row in reversed(rows):
         lat = f"  {row[4]}ms" if row[4] is not None else ""
         print(f"  #{row[0]} [{row[1]}] {row[3]}{lat}  {row[2]}")
+        print(f"      -> {row[5]}")
 
 
 def show_status(conn, executor) -> None:
