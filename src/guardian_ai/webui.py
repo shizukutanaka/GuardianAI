@@ -16,6 +16,7 @@ UX contract (first principles):
 """
 import json
 import queue
+import secrets
 import threading
 import time
 import webbrowser
@@ -266,7 +267,10 @@ td{padding:8px 10px;border-top:1px solid var(--border);
 
 <script>
 const $=id=>document.getElementById(id);
-const J=u=>fetch(u).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
+const _T=new URLSearchParams(location.search).get('t')||sessionStorage.getItem('st')||'';
+sessionStorage.setItem('st',_T);
+const H=o=>({...(o||{}),headers:{...((o&&o.headers)||{}),'X-Token':_T}});
+const J=u=>fetch(u,H()).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
 const badge=(t,c)=>`<span class="badge b-${c}">${t}</span>`;
 const esc=s=>String(s??'').replace(/[&<>"']/g,
   c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -354,16 +358,16 @@ async function submit(){
   const t0=Date.now();
   try{
     let body={text};
-    let r=await fetch('/api/request',{method:'POST',
+    let r=await fetch('/api/request',H({method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(body)}).then(r=>r.json());
+      body:JSON.stringify(body)})).then(r=>r.json());
     if(r.error==='chain_broken'){
       // same explicit-ack gate as the CLI - never write silently
       if(confirm(`Audit chain is broken at #${r.broken_at}: ${r.reason}\n\n`+
                  `The trail may be tampered. Continue anyway?`)){
-        r=await fetch('/api/request',{method:'POST',
+        r=await fetch('/api/request',H({method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({text,ack_broken:true})}).then(r=>r.json());
+          body:JSON.stringify({text,ack_broken:true})})).then(r=>r.json());
       }else{
         paintStages([]);
         toast('中止しました','破損した監査チェーンへの書き込みを拒否');
@@ -410,9 +414,9 @@ async function doVerify(){
 }
 async function doExport(){
   try{
-    const r=await fetch('/api/export',{method:'POST',
+    const r=await fetch('/api/export',H({method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:'{}'}).then(r=>r.json());
+      body:'{}'})).then(r=>r.json());
     window._lastExport=r.path;
     toast('audit exported',
       r.chain_broken?'WARNING: audit chain is broken - this export '
@@ -425,9 +429,9 @@ async function doDecrypt(){
   const path=prompt('decrypt file path (.enc):',window._lastExport||'');
   if(!path)return;
   try{
-    const r=await fetch('/api/decrypt',{method:'POST',
+    const r=await fetch('/api/decrypt',H({method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({path})}).then(r=>r.json());
+      body:JSON.stringify({path})})).then(r=>r.json());
     // non-JSON payloads return {decrypted} with no entries - show the
     // text (esc via textContent) instead of 'undefined entries'.
     if(r.decrypted!=null){
@@ -534,7 +538,20 @@ class _Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):  # keep the console quiet
         pass
 
+    def _authorized(self) -> bool:
+        """Every /api/ request needs the session token - on a customer's
+        machine, any local process could otherwise read the audit trail
+        (GETs) or pollute it (POST /api/request). The token is generated
+        per-server-run and delivered only via the browser URL."""
+        if not self.path.startswith("/api/"):
+            return True
+        return self.headers.get("X-Token") == getattr(
+            self.server, "token", None)
+
     def do_GET(self):
+        if not self._authorized():
+            self._send(401, json.dumps({"error": "unauthorized"}))
+            return
         # A failed pool acquire (DB locked, disk full) must not drop the
         # connection silently - report it so the UI can show a real state.
         try:
@@ -599,6 +616,9 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(404, json.dumps({"error": "not found"}))
 
     def do_POST(self):
+        if not self._authorized():
+            self._send(401, json.dumps({"error": "unauthorized"}))
+            return
         # CSRF: apply to EVERY POST, not just /api/request - routing a
         # path before this check would let a foreign website bypass the
         # protection (the JSON preflight blocks reads, not the request
@@ -737,7 +757,10 @@ def serve(port: int = PORT, open_browser: bool = True) -> None:
     httpd = ThreadingHTTPServer((HOST, port), _Handler)
     httpd.router = Router()
     httpd.executor = Executor()
-    url = f"http://{HOST}:{port}"
+    # per-run session token - the URL is the credential. A local process
+    # that can't see the URL can't reach the API.
+    httpd.token = secrets.token_urlsafe(24)
+    url = f"http://{HOST}:{port}/?t={httpd.token}"
     print(f"ShieldAI UI: {url}  (Ctrl+C to stop)")
     if open_browser:
         webbrowser.open(url)

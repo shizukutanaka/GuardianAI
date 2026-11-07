@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""Build the standalone shieldai.exe - no Python required on the
+customer's machine (PyInstaller --onefile).
+
+  python scripts/build_exe.py
+
+Output: dist/shieldai.exe. The exe is unsigned - v1 ships it with
+SHA256SUMS.txt for manual verification (code signing comes later;
+unsigned+broken is safer than unsigned+silent).
+"""
+import hashlib
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent.resolve()
+SRC = ROOT / "src"
+DIST = ROOT / "dist"
+
+
+def main() -> int:
+    shutil.rmtree(ROOT / "build", ignore_errors=True)
+    for stale in ROOT.glob("shieldai.spec"):
+        stale.unlink()
+    rc = subprocess.call([
+        sys.executable, "-m", "PyInstaller",
+        "--onefile", "--clean", "--name", "shieldai",
+        "--paths", str(SRC),
+        "--collect-all", "guardian_ai",
+        "--distpath", str(DIST),
+        "--workpath", str(ROOT / "build"),
+        str(SRC / "main.py"),
+    ], cwd=str(ROOT))
+    if rc:
+        return rc
+    exe = DIST / "shieldai.exe"
+    # publish the hash - an unsigned binary is verifiable if the digest
+    # is delivered through a second channel (the GitHub release).
+    digest = hashlib.sha256(exe.read_bytes()).hexdigest()
+    sums = DIST / "SHA256SUMS.txt"
+    sums.write_text(f"{digest}  shieldai.exe\n", encoding="utf-8")
+    print(f"[OK] {exe} ({exe.stat().st_size} bytes)")
+    print(f"[OK] {sums}: {digest}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

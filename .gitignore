@@ -30,5 +30,8 @@ skill/
 
 # Ignore Python bytecode
 dist/
+build/
+*.spec
 src/test_reports/
 *.enc
+*.license

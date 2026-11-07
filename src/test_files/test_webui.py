@@ -13,11 +13,25 @@ def test():
     srv = ThreadingHTTPServer(('127.0.0.1', 0), w._Handler)
     srv.router = __import__('guardian_ai.router', fromlist=['Router']).Router()
     srv.executor = __import__('guardian_ai.executor', fromlist=['Executor']).Executor()
+    srv.token = 'test-tok'
     port = srv.server_address[1]
     t = threading.Thread(target=srv.serve_forever, daemon=True); t.start()
     base = f'http://127.0.0.1:{port}'
-    def get(p):
-        return json.loads(urllib.request.urlopen(base + p, timeout=10).read())
+    def get(p, tok='test-tok'):
+        req = urllib.request.Request(base + p, headers={'X-Token': tok})
+        return json.loads(urllib.request.urlopen(req, timeout=10).read())
+    # the session token gates every /api/ endpoint - without it a local
+    # process could read or pollute the audit trail
+    try:
+        get('/api/status', tok='')
+        assert False, 'no-token request must 401'
+    except urllib.error.HTTPError as e:
+        assert e.code == 401
+    try:
+        get('/api/status', tok='wrong')
+        assert False, 'wrong-token request must 401'
+    except urllib.error.HTTPError as e:
+        assert e.code == 401
     s = get('/api/status')
     assert 'audit_entries' in s and 'chain' in s
     assert get('/api/verify')['ok'] is True
@@ -25,7 +39,8 @@ def test():
     assert isinstance(get('/api/tasks'), list)
     req = urllib.request.Request(base + '/api/request',
         data=json.dumps({'text':'server ERROR check'}).encode(),
-        headers={'Content-Type':'application/json'}, method='POST')
+        headers={'Content-Type':'application/json',
+                 'X-Token':'test-tok'}, method='POST')
     r = json.loads(urllib.request.urlopen(req, timeout=30).read())
     assert r['agent'] == 'it' and 'entry_id' in r
     srv.shutdown()
