@@ -396,6 +396,45 @@ def _forged_work_records(conn: sqlite3.Connection) -> int:
     return bad
 
 
+def _forged_rows(conn: sqlite3.Connection) -> list:
+    """List the forged work-record rows so a 'forged: N' count can be
+    investigated - a count alone can't show WHICH rows were fabricated."""
+    out = []
+    for rid, tid, agent, st, pri, sig in conn.execute(
+            "SELECT id, task_id, agent, status, priority, row_hmac "
+            "FROM task_queue ORDER BY id").fetchall():
+        if sig is None:
+            continue
+        if sig != _task_hmac(tid, agent, st, pri):
+            out.append({"table": "task_queue", "id": rid, "agent": agent,
+                        "status": st, "reason": "invalid signature"})
+    last_signed = conn.execute(
+        "SELECT COALESCE(MAX(id),-1) FROM task_queue "
+        "WHERE row_hmac IS NOT NULL").fetchone()[0]
+    for rid, agent in conn.execute(
+            "SELECT id, agent FROM task_queue WHERE row_hmac IS NULL "
+            "AND id > ?", (last_signed,)).fetchall():
+        out.append({"table": "task_queue", "id": rid, "agent": agent,
+                    "reason": "unsigned insert"})
+    for rid, ag, pri, desc, eid, sig in conn.execute(
+            "SELECT id, agent, priority, description, audit_entry_id, "
+            "row_hmac FROM tasks ORDER BY id").fetchall():
+        if sig is None:
+            continue
+        if sig != _row_hmac(ag, pri, desc, eid):
+            out.append({"table": "tasks", "id": rid, "agent": ag,
+                        "description": desc, "reason": "invalid signature"})
+    ts_signed = conn.execute(
+        "SELECT COALESCE(MAX(id),-1) FROM tasks "
+        "WHERE row_hmac IS NOT NULL").fetchone()[0]
+    for rid, agent in conn.execute(
+            "SELECT id, agent FROM tasks WHERE row_hmac IS NULL "
+            "AND id > ?", (ts_signed,)).fetchall():
+        out.append({"table": "tasks", "id": rid, "agent": agent,
+                    "reason": "unsigned insert"})
+    return out
+
+
 def _verify_task_signatures(conn: sqlite3.Connection) -> dict:
     bad = _forged_work_records(conn)
     return {"ok": bad == 0, "broken_at": None,

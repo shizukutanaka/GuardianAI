@@ -35,6 +35,7 @@ HELP = """Commands:
   status        show audit integrity and queue stats
   status --json machine-readable status (audit_integrity as JSON)
   verify --json machine-readable chain verify (ok/broken/forged as JSON)
+  forged [--json] list forged work-record rows (invalid/unsigned signatures)
   history --json [N] machine-readable audit history (latest N as JSON)
   backup --json machine-readable backup path ({path} as JSON)
   decrypt --json FILE machine-readable decrypt+verify ({ok,entries_ok})
@@ -222,6 +223,21 @@ def main() -> None:
                 import json as _json
                 print(_json.dumps(verify_audit_chain(conn),
                                   ensure_ascii=False))
+                continue
+            if cmd == "forged" or cmd == "forged --json":
+                # 'forged' lists WHICH work-record rows were fabricated -
+                # 'verify: forged_tasks=N' alone can't identify them.
+                from guardian_ai.db import _forged_rows
+                rows = _forged_rows(conn)
+                if cmd.endswith("--json"):
+                    import json as _json
+                    print(_json.dumps(rows, ensure_ascii=False))
+                else:
+                    if not rows:
+                        print("no forged work-record rows")
+                    for r in rows:
+                        print(f"[{r['table']}] #{r['id']} {r['agent']} "
+                              f"({r.get('reason','')})")
                 continue
             if cmd == "verify":
                 v = verify_audit_chain(conn)
