@@ -371,7 +371,9 @@ async function doVerify(){
 }
 async function doExport(){
   try{
-    const r=await J('/api/export');
+    const r=await fetch('/api/export',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:'{}'}).then(r=>r.json());
     toast('audit exported',r.path);
   }catch(e){toast('export failed',e.message)}
 }
@@ -464,12 +466,6 @@ class _Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/verify":
             self._send(200, json.dumps(
                 verify_audit_chain(conn), ensure_ascii=False))
-        elif self.path == "/api/export":
-            try:
-                path = export_audit(conn)
-                self._send(200, json.dumps({"path": path}))
-            except RuntimeError as e:
-                self._send(500, json.dumps({"error": str(e)}))
         else:
             self._send(404, json.dumps({"error": "not found"}))
 
@@ -492,6 +488,16 @@ class _Handler(BaseHTTPRequestHandler):
             return
         if self.path == "/api/decrypt":
             self._decrypt()
+            return
+        # export writes a file - it is a side-effecting operation, so it
+        # belongs behind POST (a GET <img> from any site could otherwise
+        # trigger exports at will).
+        if self.path == "/api/export":
+            try:
+                path = export_audit(_conn())
+                self._send(200, json.dumps({"path": path}))
+            except RuntimeError as e:
+                self._send(500, json.dumps({"error": str(e)}))
             return
         if self.path != "/api/request":
             self._send(404, json.dumps({"error": "not found"}))
