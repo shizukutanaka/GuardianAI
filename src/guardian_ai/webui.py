@@ -431,6 +431,11 @@ class _Handler(BaseHTTPRequestHandler):
             return
         try:
             length = int(self.headers.get("Content-Length", 0))
+            # Requests are short text - an unbounded read() would let a
+            # huge Content-Length exhaust memory or block forever.
+            if length > 65536:
+                self._send(413, json.dumps({"error": "body too large"}))
+                return
             payload = json.loads(
                 self.rfile.read(length).decode("utf-8") or "{}")
             text = str(payload.get("text", "")).strip()
