@@ -187,6 +187,13 @@ def main() -> None:
                     "q.created_at FROM task_queue q "
                     "JOIN tasks t ON q.task_id = t.id "
                     "ORDER BY q.id DESC LIMIT 20").fetchall()
+                # same gate as history - warn before showing a forged
+                # work record, don't silently present fabricated data.
+                from guardian_ai.db import _forged_work_records
+                forged = _forged_work_records(conn)
+                if forged:
+                    print(f"WARNING: {forged} forged work-record row(s) - "
+                          "invalid signature")
                 if cmd.endswith("--json"):
                     import json as _json
                     print(_json.dumps(
