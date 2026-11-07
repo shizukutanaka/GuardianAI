@@ -290,9 +290,24 @@ async function submit(){
   paintStages();
   const t0=Date.now();
   try{
-    const r=await fetch('/api/request',{method:'POST',
+    let body={text};
+    let r=await fetch('/api/request',{method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({text})}).then(r=>r.json());
+      body:JSON.stringify(body)}).then(r=>r.json());
+    if(r.error==='chain_broken'){
+      // same explicit-ack gate as the CLI - never write silently
+      if(confirm(`Audit chain is broken at #${r.broken_at}: ${r.reason}\n\n`+
+                 `The trail may be tampered. Continue anyway?`)){
+        r=await fetch('/api/request',{method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({text,ack_broken:true})}).then(r=>r.json());
+      }else{
+        paintStages([]);
+        toast('中止しました','破損した監査チェーンへの書き込みを拒否');
+        busy=false;$('run').disabled=false;$('run').textContent='実行';
+        return;
+      }
+    }
     if(r.error)throw new Error(r.error);
     paintStages(r.tasks||[]);
     $('result').classList.add('show');
@@ -423,6 +438,15 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send(400, json.dumps({"error": "empty request"}))
                 return
             conn = _conn()
+            # Same gate as the CLI (Socratic): never silently write to a
+            # compromised audit trail - require explicit client ack.
+            chain = verify_audit_chain(conn)
+            if not chain.get("ok") and not payload.get("ack_broken"):
+                self._send(409, json.dumps({
+                    "error": "chain_broken",
+                    "broken_at": chain.get("broken_at"),
+                    "reason": chain.get("reason", "")}))
+                return
             result = self.server.router.analyze(text)
             t0 = time.monotonic()
             result["execution"] = self.server.executor.execute(text, result)
