@@ -376,11 +376,15 @@ async function doExport(){
     const r=await fetch('/api/export',{method:'POST',
       headers:{'Content-Type':'application/json'},
       body:'{}'}).then(r=>r.json());
+    window._lastExport=r.path;
     toast('audit exported',r.path);
   }catch(e){toast('export failed',e.message)}
 }
 async function doDecrypt(){
-  const path=prompt('decrypt file path (.enc):');if(!path)return;
+  // export already returned the path - offer it so the user is not
+  // expected to memorise a filesystem path (export->decrypt flow).
+  const path=prompt('decrypt file path (.enc):',window._lastExport||'');
+  if(!path)return;
   try{
     const r=await fetch('/api/decrypt',{method:'POST',
       headers:{'Content-Type':'application/json'},
