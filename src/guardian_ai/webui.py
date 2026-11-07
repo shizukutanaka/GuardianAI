@@ -69,6 +69,19 @@ def _release(conn) -> None:
 # each 10s poll is O(#signed rows) and wasteful when nothing changed.
 _forged_cache = {"count": -1, "forged": 0}
 
+
+def _log_error(msg: str) -> None:
+    """Persist request-handling errors - stderr alone is lost once the
+    server's terminal closes, so a file log keeps failures debuggable."""
+    try:
+        from guardian_ai.paths import data_dir
+        from datetime import datetime
+        log = data_dir() / "webui-errors.log"
+        with log.open("a", encoding="utf-8") as f:
+            f.write(f"{datetime.now():%Y-%m-%d %H:%M:%S} {msg}\n")
+    except Exception:
+        pass  # logging must never break the request path
+
 _HTML = r"""<!doctype html>
 <html lang="ja" data-theme="dark">
 <head>
@@ -270,6 +283,8 @@ async function refresh(){
       // 'chain ok' would overclaim full verification (verify runs it).
       `<span class="dot ${chain.ok?'ok':'bad'}"><i></i>${
         chain.ok?'tip ok':'tip broken'}</span>`+
+      `<span class="dot ${s.kms_ok===false?'bad':'ok'}"><i></i>${
+        s.kms_ok===false?'key missing':'key ok'}</span>`+
       `<span class="dot ${s.ollama_up?'ok':'warn'}"><i></i>${
         s.ollama_up?(s.models[0]||'model'):'deterministic'}</span>`+
       `<span class="dot"><i></i>${s.audit_entries} entries</span>`+
@@ -463,8 +478,15 @@ def _status_payload(conn, executor):
                      else "tip/state mismatch - run verify") +
                   (f"; {forged} forged work-record row(s)"
                    if forged else "")}
+    # surface KMS key health too - if the key is lost, chain verification
+    # fails cryptically instead of a clear 'key missing' signal.
+    try:
+        from guardian_ai.kms import get_key
+        kms_ok = bool(get_key("audit_chain"))
+    except Exception:
+        kms_ok = False
     ollama = executor.llm
-    return {"audit_entries": count,
+    return {"audit_entries": count, "kms_ok": kms_ok,
             "quick_check": conn.execute("PRAGMA quick_check").fetchone()[0],
             "chain": chain,
             "triggers_missing": [t for t in (
@@ -500,6 +522,7 @@ class _Handler(BaseHTTPRequestHandler):
         try:
             conn = _conn()
         except Exception as e:
+            _log_error(f"503 db unavailable: {e}")
             self._send(503, json.dumps({"error": f"db unavailable: {e}"}))
             return
         try:
@@ -619,6 +642,7 @@ class _Handler(BaseHTTPRequestHandler):
                 "tasks": result["execution"].get("steps", []),
             }, ensure_ascii=False))
         except Exception as e:  # one boundary for the whole POST
+            _log_error(f"500 POST {self.path}: {e}")
             self._send(500, json.dumps({"error": str(e)}))
 
     def _decrypt(self):
