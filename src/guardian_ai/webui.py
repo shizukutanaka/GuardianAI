@@ -21,7 +21,7 @@ import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from guardian_ai.compliance import audit_integrity, redact
+from guardian_ai.compliance import redact
 from guardian_ai.db import (init_database, audit_log, export_audit,
                             record_tasks, verify_audit_chain)
 from guardian_ai.executor import Executor
