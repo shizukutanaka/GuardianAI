@@ -485,9 +485,10 @@ def _status_payload(conn, executor):
         "SELECT (SELECT COUNT(*) FROM tasks)+"
         "(SELECT COUNT(*) FROM task_queue)").fetchone()[0]
     if _forged_cache.get("count") != task_count:
-        from guardian_ai.db import _forged_work_records
-        forged = _forged_work_records(conn)
-        _forged_cache = {"count": task_count, "forged": forged}
+        from guardian_ai.db import _forged_work_records, _forged_rows
+        _forged_cache = {"count": task_count,
+                         "forged": _forged_work_records(conn),
+                         "rows": _forged_rows(conn)}
     forged = _forged_cache["forged"]
     chain = {"ok": tip_ok and forged == 0, "entries": count,
              "forged_tasks": forged,
@@ -579,11 +580,21 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(200, json.dumps(
                 verify_audit_chain(conn), ensure_ascii=False))
         elif self.path == "/api/forged":
-            # parity with the CLI 'forged' command - the UI needs to see
-            # WHICH rows are fabricated, not just 'tip broken'.
-            from guardian_ai.db import _forged_rows
+            # reuse the forged cache - recomputing every signature on
+            # every poll duplicates the status check's O(#signed rows)
+            # cost; the rows are only stale until the next count change.
+            global _forged_cache
+            task_count = conn.execute(
+                "SELECT (SELECT COUNT(*) FROM tasks)+"
+                "(SELECT COUNT(*) FROM task_queue)").fetchone()[0]
+            if _forged_cache.get("count") != task_count:
+                from guardian_ai.db import _forged_work_records, \
+                    _forged_rows
+                _forged_cache = {"count": task_count,
+                                 "forged": _forged_work_records(conn),
+                                 "rows": _forged_rows(conn)}
             self._send(200, json.dumps(
-                _forged_rows(conn), ensure_ascii=False))
+                _forged_cache.get("rows", []), ensure_ascii=False))
         else:
             self._send(404, json.dumps({"error": "not found"}))
 
