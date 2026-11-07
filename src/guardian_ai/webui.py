@@ -462,21 +462,20 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(404, json.dumps({"error": "not found"}))
 
     def do_POST(self):
+        # CSRF: apply to EVERY POST, not just /api/request - routing a
+        # path before this check would let a foreign website bypass the
+        # protection (the JSON preflight blocks reads, not the request
+        # itself). Reject any non-localhost Origin.
+        origin = self.headers.get("Origin", "")
+        if origin and not origin.startswith(("http://127.0.0.1",
+                                             "http://localhost")):
+            self._send(403, json.dumps({"error": "foreign origin"}))
+            return
         if self.path == "/api/decrypt":
             self._decrypt()
             return
         if self.path != "/api/request":
             self._send(404, json.dumps({"error": "not found"}))
-            return
-        # CSRF: a website open in the user's browser could try to drive
-        # the local daemon (application/json triggers a preflight that
-        # fails, but defence in depth demands an explicit check). Reject
-        # any request whose Origin is not this server; curl/CLI clients
-        # send no Origin and are unaffected.
-        origin = self.headers.get("Origin", "")
-        if origin and not origin.startswith(("http://127.0.0.1",
-                                             "http://localhost")):
-            self._send(403, json.dumps({"error": "foreign origin"}))
             return
         try:
             length = int(self.headers.get("Content-Length", 0))
