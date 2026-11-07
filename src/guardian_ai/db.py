@@ -89,6 +89,7 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
             agent TEXT NOT NULL,
             status TEXT DEFAULT 'pending',
             priority TEXT DEFAULT 'medium',
+            row_hmac TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (task_id) REFERENCES tasks (id)
         )
@@ -209,6 +210,10 @@ def _migrate_chain_hash(conn: sqlite3.Connection) -> None:
     if task_cols and "audit_entry_id" not in task_cols:
         conn.execute("ALTER TABLE tasks ADD COLUMN audit_entry_id INTEGER")
         conn.commit()
+    q_cols = {r[1] for r in conn.execute("PRAGMA table_info(task_queue)")}
+    if q_cols and "row_hmac" not in q_cols:
+        conn.execute("ALTER TABLE task_queue ADD COLUMN row_hmac TEXT")
+        conn.commit()
 
 
 def _backfill_chain(conn: sqlite3.Connection) -> None:
@@ -230,6 +235,17 @@ def _backfill_chain(conn: sqlite3.Connection) -> None:
         dirty = True
     if dirty:
         conn.commit()
+
+
+def _task_hmac(task_id: int, agent: str, status: str,
+               priority: str) -> str:
+    """HMAC a task_queue row so a forged INSERT is detectable - an
+    attacker can add rows but cannot compute a valid signature without
+    the KMS-protected key."""
+    from guardian_ai.kms import get_key
+    body = f"{task_id}|{agent}|{status}|{priority}"
+    return hmac.new(get_key("audit_chain"), body.encode("utf-8"),
+                    hashlib.sha256).hexdigest()
 
 
 def _state_hmac(row_count: int, head: str) -> str:
@@ -328,12 +344,29 @@ def verify_audit_chain(conn: sqlite3.Connection) -> dict:
     present = {r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='trigger'").fetchall()}
     missing = [t for t in _EXPECTED_TRIGGERS if t not in present]
-    # task_queue is operational state, not the audit trail - a forged
-    # INSERT can point audit_entry_id at a real entry, so a link-based
-    # check would give false confidence. The immutable audit record is
-    # audit_logs (chain-protected); task_queue is the working queue.
-    return {"ok": True, "broken_at": None, "entries": len(rows),
-            "triggers_missing": missing}
+    # Forged task_queue rows: each row is HMAC-signed with the audit key
+    # at insert time. Verify the SIGNATURE, not just its presence - a
+    # fabricated row with any string in row_hmac must fail recomputation.
+    # Legacy rows (pre-signing, NULL) are honest, not forged.
+    bad = 0
+    for tid, agent, st, pri, sig in conn.execute(
+            "SELECT task_id, agent, status, priority, row_hmac "
+            "FROM task_queue WHERE row_hmac IS NOT NULL").fetchall():
+        if sig != _task_hmac(tid, agent, st, pri):
+            bad += 1
+    # an unsigned row newer than the last signed one = forged insert;
+    # if NO signed rows exist yet, all NULL rows are legacy (honest) -
+    # use max-int as the threshold so nothing is falsely flagged.
+    unsigned = conn.execute(
+        "SELECT COUNT(*) FROM task_queue WHERE row_hmac IS NULL "
+        "AND id > COALESCE((SELECT MAX(id) FROM task_queue "
+        "WHERE row_hmac IS NOT NULL), 9223372036854775807)"
+    ).fetchone()[0]
+    bad += unsigned
+    return {"ok": bad == 0, "broken_at": None, "entries": len(rows),
+            "triggers_missing": missing, "forged_tasks": bad,
+            "reason": f"{bad} forged task_queue row(s) - invalid "
+                      "signature" if bad else None}
 
 
 def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
@@ -364,9 +397,12 @@ def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
         cur = conn.execute(
             "INSERT INTO tasks (agent, priority, description, audit_entry_id) "
             "VALUES (?, ?, ?, ?)", (agent, priority, desc, audit_entry_id))
+        tid = cur.lastrowid
         conn.execute(
-            "INSERT INTO task_queue (task_id, agent, status, priority) "
-            "VALUES (?, ?, ?, ?)", (cur.lastrowid, agent, status, priority))
+            "INSERT INTO task_queue (task_id, agent, status, priority, "
+            "row_hmac) VALUES (?, ?, ?, ?, ?)",
+            (tid, agent, status, priority,
+             _task_hmac(tid, agent, status, priority)))
     conn.commit()
 
 
