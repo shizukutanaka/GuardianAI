@@ -148,6 +148,11 @@ def main() -> None:
                 from guardian_ai.webui import serve
                 serve()  # blocks until Ctrl+C; returns here on exit
                 continue
+            if cmd == "status --json":
+                # machine-readable status for monitoring/scripting.
+                import json as _json
+                print(_json.dumps(audit_integrity(), ensure_ascii=False))
+                continue
             if cmd == "status":
                 show_status(conn, executor)
                 continue
