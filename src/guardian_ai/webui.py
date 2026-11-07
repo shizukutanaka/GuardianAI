@@ -42,14 +42,20 @@ _pool_init = threading.Lock()
 
 
 def _conn():
+    """Check out a pooled connection. sqlite3 starts an implicit
+    transaction on DML, so a conn released mid-exception could carry an
+    open transaction + write lock into the next request - rollback on
+    checkout guarantees a clean state."""
     try:
-        return _pool.get_nowait()
+        conn = _pool.get_nowait()
     except queue.Empty:
         with _pool_init:
             try:
-                return _pool.get_nowait()
+                conn = _pool.get_nowait()
             except queue.Empty:
                 return init_database()
+    conn.rollback()
+    return conn
 
 
 def _release(conn) -> None:
