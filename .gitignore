@@ -35,3 +35,4 @@ build/
 src/test_reports/
 *.enc
 *.license
+.vendor/

@@ -10,8 +10,8 @@ Usage:
                          [--expires YYYY-MM-DD]
                          [--features a,b,c] [--out FILE]
 
-The private key lives in a vendor secrets dir (default
-%SHIELDAI_VENDOR_KEY% or ~/.shieldai-vendor/ed25519.key). If it leaks,
+The private key lives in the repo-local .vendor/ dir (default
+%SHIELDAI_VENDOR_KEY% or <repo>/.vendor/ed25519.key). If it leaks,
 anyone can forge licenses - treat it like a CA key.
 """
 import argparse
@@ -22,12 +22,14 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+ROOT = Path(__file__).parent.parent.resolve()
+
 
 def _key_path() -> Path:
     env = os.environ.get("SHIELDAI_VENDOR_KEY")
     if env:
         return Path(env)
-    return Path.home() / ".shieldai-vendor" / "ed25519.key"
+    return ROOT / ".vendor" / "ed25519.key"
 
 
 def _canonical(payload: dict) -> bytes:

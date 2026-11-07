@@ -123,7 +123,11 @@ def main() -> None:
     # 'shieldai <command>' runs one command and exits - the --json
     # surface is only scriptable when argv reaches it (piping the REPL
     # also works but is ugly). No argv -> interactive REPL as before.
+    # Exception: a frozen exe with no args is the PRODUCT - a customer
+    # double-clicking it expects the dashboard, not a REPL prompt.
     one_shot = " ".join(sys.argv[1:]).strip()
+    if not one_shot and getattr(sys, "frozen", False):
+        one_shot = "ui"
     chain = verify_audit_chain(conn)
     if not chain.get("ok"):
         print(f"[WARN] audit chain broken at #{chain.get('broken_at')}: "

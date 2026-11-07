@@ -296,6 +296,8 @@ async function refresh(){
         chain.forged_tasks} forged</span>`:'')+
       `<span class="dot ${s.kms_ok===false?'bad':'ok'}"><i></i>${
         s.kms_ok===false?'key missing':'key ok'}</span>`+
+      `<span class="dot ${(s.license||{}).valid?'ok':'warn'}"><i></i>${
+        (s.license||{}).valid?'licensed':'unlicensed'}</span>`+
       `<span class="dot ${s.ollama_up?'ok':'warn'}"><i></i>${
         s.ollama_up?(s.models[0]||'model'):'deterministic'}</span>`+
       `<span class="dot"><i></i>${s.audit_entries} entries</span>`+
@@ -508,7 +510,18 @@ def _status_payload(conn, executor):
     except Exception:
         kms_ok = False
     ollama = executor.llm
+    # license state belongs in the ambient health - a commercial product
+    # shows its own entitlement, not just on a forgotten CLI command.
+    try:
+        from guardian_ai.licensing import license_status
+        lic = license_status()
+        license_info = {"valid": lic["valid"],
+                        "licensee": lic.get("licensee"),
+                        "reason": lic.get("reason")}
+    except Exception:
+        license_info = {"valid": False, "reason": "check failed"}
     return {"audit_entries": count, "kms_ok": kms_ok,
+            "license": license_info,
             "quick_check": conn.execute("PRAGMA quick_check").fetchone()[0],
             "chain": chain,
             "triggers_missing": [t for t in (
