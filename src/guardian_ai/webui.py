@@ -288,6 +288,8 @@ async function refresh(){
       // 'chain ok' would overclaim full verification (verify runs it).
       `<span class="dot ${chain.ok?'ok':'bad'}"><i></i>${
         chain.ok?'tip ok':'tip broken'}</span>`+
+      (chain.forged_tasks?`<span class="dot bad"><i></i>${
+        chain.forged_tasks} forged</span>`:'')+
       `<span class="dot ${s.kms_ok===false?'bad':'ok'}"><i></i>${
         s.kms_ok===false?'key missing':'key ok'}</span>`+
       `<span class="dot ${s.ollama_up?'ok':'warn'}"><i></i>${
@@ -568,6 +570,12 @@ class _Handler(BaseHTTPRequestHandler):
         elif self.path == "/api/verify":
             self._send(200, json.dumps(
                 verify_audit_chain(conn), ensure_ascii=False))
+        elif self.path == "/api/forged":
+            # parity with the CLI 'forged' command - the UI needs to see
+            # WHICH rows are fabricated, not just 'tip broken'.
+            from guardian_ai.db import _forged_rows
+            self._send(200, json.dumps(
+                _forged_rows(conn), ensure_ascii=False))
         else:
             self._send(404, json.dumps({"error": "not found"}))
 
