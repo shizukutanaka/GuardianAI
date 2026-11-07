@@ -33,6 +33,7 @@ HELP = """Commands:
   history [N]   show the N most recent audit entries (default 10)
   status        show audit integrity and queue stats
   status --json machine-readable status (audit_integrity as JSON)
+  verify --json machine-readable chain verify (ok/broken/forged as JSON)
   export        write ALL audit entries + work record to an encrypted .enc file
   backup        snapshot the whole DB to backups/ (consistent VACUUM INTO)
   decrypt FILE  decrypt an .enc export with the local KMS key
@@ -156,6 +157,14 @@ def main() -> None:
                 continue
             if cmd == "status":
                 show_status(conn, executor)
+                continue
+            if cmd == "verify --json":
+                # machine-readable verify - the integrity check is what
+                # monitoring consumes, so it deserves the same --json as
+                # status (consistent observability surface).
+                import json as _json
+                print(_json.dumps(verify_audit_chain(conn),
+                                  ensure_ascii=False))
                 continue
             if cmd == "verify":
                 v = verify_audit_chain(conn)
