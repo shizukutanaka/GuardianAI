@@ -33,6 +33,7 @@ HELP = """Commands:
   history [N]   show the N most recent audit entries (default 10)
   status        show audit integrity and queue stats
   export        write ALL audit entries + work record to an encrypted .enc file
+  backup        snapshot the whole DB to backups/ (consistent VACUUM INTO)
   decrypt FILE  decrypt an .enc export with the local KMS key
   verify        re-run the HMAC audit-chain check explicitly
   ui            open the local web dashboard (http://127.0.0.1:8765)
@@ -167,6 +168,21 @@ def main() -> None:
                     print(f"exported: {export_audit(conn)}")
                 except RuntimeError as e:
                     print(f"export failed: {e}")
+                continue
+            if cmd == "backup":
+                # VACUUM INTO gives a consistent DB snapshot (unlike a
+                # raw file copy, which can catch a mid-write page) - the
+                # audit trail can be archived without weakening it.
+                try:
+                    from guardian_ai.paths import data_dir
+                    from datetime import datetime
+                    dst = (data_dir() / "backups" /
+                           f"audit-{datetime.now():%Y%m%d-%H%M%S}.db")
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    conn.execute("VACUUM INTO ?", (str(dst),))
+                    print(f"backup: {dst}")
+                except Exception as e:
+                    print(f"backup failed: {e}")
                 continue
             if cmd.startswith("decrypt "):
                 target = Path(user_input[8:].strip())

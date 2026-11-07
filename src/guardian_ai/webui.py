@@ -412,10 +412,16 @@ async function doDecrypt(){
 /* ---------- keys ---------- */
 $('req').addEventListener('keydown',e=>{if(e.key==='Enter')submit()});
 /* refresh stacking: skip a poll while one is still in flight - a slow
-   status call (>10s) would otherwise queue overlapping refreshes. */
+   status call (>10s) would otherwise queue overlapping refreshes. A
+   hidden tab also skips polls - background polling wastes cycles. */
 let _refreshing=false;
-const refreshOnce=()=>{if(_refreshing)return;_refreshing=true;
+const refreshOnce=()=>{
+  if(_refreshing||document.hidden)return;
+  _refreshing=true;
   refresh().finally(()=>_refreshing=false);};
+// catch up immediately when the user returns to the tab
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden)refreshOnce();});
 refreshOnce();setInterval(refreshOnce,10000);
 </script>
 </body></html>"""
