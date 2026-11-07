@@ -2,6 +2,7 @@
 import hashlib
 import hmac
 import sqlite3
+import threading
 
 from guardian_ai.paths import data_dir
 
@@ -255,21 +256,33 @@ def _resync_chain_state(conn: sqlite3.Connection) -> None:
     _update_chain_state(conn)
 
 
+_chain_lock = threading.Lock()
+
+
 def audit_log(conn: sqlite3.Connection, agent: str, request: str,
               result: str, latency_ms: int = None) -> int:
-    """Append one entry to audit_logs, commit, and return its row id."""
-    prev_row = conn.execute(
-        "SELECT chain_hash FROM audit_logs ORDER BY id DESC LIMIT 1").fetchone()
-    prev = prev_row[0] if prev_row and prev_row[0] else ""
-    ts = conn.execute("SELECT CURRENT_TIMESTAMP").fetchone()[0]
-    h = _chain_hash(prev, agent, request, result, ts)
-    cur = conn.execute(
-        "INSERT INTO audit_logs (agent, request, result, timestamp, "
-        "latency_ms, chain_hash) VALUES (?, ?, ?, ?, ?, ?)",
-        (agent, request, result, ts, latency_ms, h))
-    conn.commit()
-    _update_chain_state(conn)
-    return cur.lastrowid
+    """Append one entry to audit_logs, commit, and return its row id.
+
+    The read-head -> hash -> insert -> update_state sequence is a single
+    critical section: two concurrent writers (e.g. ThreadingHTTPServer
+    request threads, each with its own connection) would otherwise chain
+    off the same prev head and fork the chain - which verify then reports
+    as 'broken' even though nobody tampered. The lock serialises the
+    append in-process (the DB is one file, so that is the correct scope)."""
+    with _chain_lock:
+        prev_row = conn.execute(
+            "SELECT chain_hash FROM audit_logs ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        prev = prev_row[0] if prev_row and prev_row[0] else ""
+        ts = conn.execute("SELECT CURRENT_TIMESTAMP").fetchone()[0]
+        h = _chain_hash(prev, agent, request, result, ts)
+        cur = conn.execute(
+            "INSERT INTO audit_logs (agent, request, result, timestamp, "
+            "latency_ms, chain_hash) VALUES (?, ?, ?, ?, ?, ?)",
+            (agent, request, result, ts, latency_ms, h))
+        conn.commit()
+        _update_chain_state(conn)
+        return cur.lastrowid
 
 
 def verify_audit_chain(conn: sqlite3.Connection) -> dict:
