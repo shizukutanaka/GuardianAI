@@ -120,13 +120,21 @@ def main() -> None:
     router = Router()
     executor = Executor()
     conn = init_database()
+    # 'shieldai <command>' runs one command and exits - the --json
+    # surface is only scriptable when argv reaches it (piping the REPL
+    # also works but is ugly). No argv -> interactive REPL as before.
+    one_shot = " ".join(sys.argv[1:]).strip()
     chain = verify_audit_chain(conn)
     if not chain.get("ok"):
         print(f"[WARN] audit chain broken at #{chain.get('broken_at')}: "
               f"{chain.get('reason', '')} - logs may have been tampered with")
-        # A control plane that claims integrity must not silently keep
-        # writing to a compromised trail - require explicit user
-        # acknowledgment rather than warn-and-continue (fail-open).
+        if one_shot:
+            # a non-interactive run cannot answer the ack gate - refuse
+            # to touch a compromised trail (fail-closed, same as 'N').
+            print("Aborting - refusing a one-shot run on a broken "
+                  "audit chain.", file=sys.stderr)
+            conn.close()
+            return
         try:
             choice = input("Continue anyway? The audit trail may be "
                            "unreliable. [y/N]: ").strip().lower()
@@ -137,13 +145,17 @@ def main() -> None:
             conn.close()
             return
 
-    print(BANNER)
+    if not one_shot:
+        print(BANNER)
+    fed = iter([one_shot]) if one_shot else None
     try:
         while True:
             try:
-                user_input = input("shieldai@> ").strip()
-            except (KeyboardInterrupt, EOFError):
-                print()
+                user_input = (next(fed) if fed is not None
+                              else input("shieldai@> ")).strip()
+            except (KeyboardInterrupt, EOFError, StopIteration):
+                if not one_shot:
+                    print()
                 break
 
             if not user_input:
@@ -463,7 +475,8 @@ def main() -> None:
     finally:
         conn.close()
 
-    print("Goodbye!")
+    if not one_shot:
+        print("Goodbye!")
 
 
 if __name__ == "__main__":
