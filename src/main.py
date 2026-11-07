@@ -194,6 +194,16 @@ def main() -> None:
                     at = f" at #{v['broken_at']}" if v.get("broken_at") else ""
                     print(f"chain BROKEN{at}: {v.get('reason','')}")
                 continue
+            if cmd == "export --json":
+                # machine-readable export path for automation.
+                import json as _json
+                try:
+                    print(_json.dumps(
+                        {"path": export_audit(conn)},
+                        ensure_ascii=False))
+                except RuntimeError as e:
+                    print(_json.dumps({"error": str(e)}))
+                continue
             if cmd == "export":
                 try:
                     print(f"exported: {export_audit(conn)}")
