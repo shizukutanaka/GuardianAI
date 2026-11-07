@@ -211,6 +211,7 @@ td{padding:8px 10px;border-top:1px solid var(--border);
     <div class="actions">
       <button class="btn ghost" onclick="doVerify()">Verify chain</button>
       <button class="btn ghost" onclick="doExport()">Export audit</button>
+      <button class="btn ghost" onclick="doDecrypt()">Decrypt</button>
     </div>
     <div class="stages" id="stages" aria-live="polite"></div>
     <div class="result" id="result" aria-live="polite">
@@ -368,6 +369,16 @@ async function doExport(){
     toast('audit exported',r.path);
   }catch(e){toast('export failed',e.message)}
 }
+async function doDecrypt(){
+  const path=prompt('decrypt file path (.enc):');if(!path)return;
+  try{
+    const r=await fetch('/api/decrypt',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({path})}).then(r=>r.json());
+    toast(r.ok?`verified: ${r.entries} entries reach signed head`
+             :`INVALID: ${r.reason}`,r.anchor||'');
+  }catch(e){toast('decrypt failed',e.message)}
+}
 /* ---------- keys ---------- */
 $('req').addEventListener('keydown',e=>{if(e.key==='Enter')submit()});
 refresh();setInterval(refresh,10000);
@@ -451,6 +462,9 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(404, json.dumps({"error": "not found"}))
 
     def do_POST(self):
+        if self.path == "/api/decrypt":
+            self._decrypt()
+            return
         if self.path != "/api/request":
             self._send(404, json.dumps({"error": "not found"}))
             return
@@ -515,6 +529,40 @@ class _Handler(BaseHTTPRequestHandler):
                 "tasks": result["execution"].get("steps", []),
             }, ensure_ascii=False))
         except Exception as e:  # one boundary for the whole POST
+            self._send(500, json.dumps({"error": str(e)}))
+
+    def _decrypt(self):
+        """Decrypt an .enc export and verify the embedded anchor +
+        that the exported entries form a chain reaching the signed head
+        - same checks as the CLI `decrypt` command."""
+        try:
+            from pathlib import Path
+            from guardian_ai.db import _chain_hash, _state_hmac
+            from guardian_ai.encryption import Encryption
+            length = int(self.headers.get("Content-Length", 0))
+            payload = json.loads(
+                self.rfile.read(length).decode("utf-8") or "{}")
+            path = Path(str(payload.get("path", "")).strip())
+            raw = Encryption().decrypt(path.read_text(encoding="utf-8"))
+            data = json.loads(raw)
+            st = data.get("chain_state")
+            out = {"ok": False, "reason": "no chain_state in export"}
+            if st and st.get("state_hmac") == _state_hmac(
+                    st.get("row_count"), st.get("head")):
+                prev = ""
+                for e in sorted(data["entries"], key=lambda x: x["id"]):
+                    prev = _chain_hash(prev, e["agent"], e["request"],
+                                       e["result"], e["timestamp"])
+                out = ({"ok": True, "entries": st["row_count"],
+                        "anchor": f"head {st['head'][:16]}..."}
+                       if prev == st["head"]
+                       else {"ok": False, "entries": st["row_count"],
+                             "anchor": f"head {st['head'][:16]}...",
+                             "reason": "entries do not reach signed head"})
+            elif st:
+                out = {"ok": False, "reason": "anchor signature invalid"}
+            self._send(200, json.dumps(out, ensure_ascii=False))
+        except Exception as e:
             self._send(500, json.dumps({"error": str(e)}))
 
 
