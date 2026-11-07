@@ -42,6 +42,8 @@ HELP = """Commands:
   export        write ALL audit entries + work record to an encrypted .enc file
   backup        snapshot the whole DB to backups/ (consistent VACUUM INTO)
   decrypt FILE  decrypt an .enc export with the local KMS key
+  license [FILE] show license status / verify a license file
+  version       show the product version
   verify        re-run the HMAC audit-chain check explicitly
   ui            open the local web dashboard (http://127.0.0.1:8765)
   help          show this message
@@ -275,6 +277,36 @@ def main() -> None:
                     for r in rows:
                         print(f"[{r['table']}] #{r['id']} {r['agent']} "
                               f"({r.get('reason','')})")
+                continue
+            if cmd == "version" or cmd == "version --json":
+                from guardian_ai import __version__
+                if cmd.endswith("--json"):
+                    import json as _json
+                    print(_json.dumps({"version": __version__}))
+                else:
+                    print(f"ShieldAI {__version__}")
+                continue
+            if cmd == "license" or cmd == "license --json" \
+                    or cmd.startswith("license "):
+                # offline Ed25519 license verification - consistent with
+                # the local-only claim (no activation server, no telemetry).
+                from guardian_ai.licensing import (verify_license,
+                                                  license_status)
+                json_out = "--json" in cmd
+                files = [p for p in cmd.split()[1:]
+                         if p != "--json"]
+                st = (verify_license(files[0]) if files
+                      else license_status())
+                if json_out:
+                    import json as _json
+                    print(_json.dumps(st, ensure_ascii=False))
+                elif st["valid"]:
+                    exp = (f" expires {str(st['expires'])[:10]}"
+                           if st.get("expires") else " perpetual")
+                    print(f"licensed to {st['licensee']} - "
+                          f"{st.get('seats')} seat(s){exp}")
+                else:
+                    print(f"unlicensed: {st['reason']}")
                 continue
             if cmd == "verify":
                 v = verify_audit_chain(conn)
