@@ -358,40 +358,48 @@ def verify_audit_chain(conn: sqlite3.Connection) -> dict:
     present = {r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='trigger'").fetchall()}
     missing = [t for t in _EXPECTED_TRIGGERS if t not in present]
-    # Forged task_queue rows: each row is HMAC-signed with the audit key
-    # at insert time. Verify the SIGNATURE, not just its presence - a
-    # fabricated row with any string in row_hmac must fail recomputation.
-    # Legacy rows (pre-signing, NULL) are honest, not forged.
+    # Work-record integrity: forged tasks/task_queue rows (invalid HMAC
+    # or unsigned inserts after signing began) are detected here too,
+    # so a fabricated 'done' record is not mistaken for real work.
+    bad = _forged_work_records(conn)
+    return {"ok": bad == 0, "broken_at": None, "entries": len(rows),
+            "triggers_missing": missing, "forged_tasks": bad,
+            "reason": f"{bad} forged work-record row(s) - invalid "
+                      "signature" if bad else None}
+
+
+def _forged_work_records(conn: sqlite3.Connection) -> int:
+    """Count work-record rows (tasks + task_queue) whose HMAC signature
+    is invalid, plus unsigned rows newer than the last signed one -
+    i.e. forged INSERTs that could not produce a valid signature."""
     bad = 0
     for tid, agent, st, pri, sig in conn.execute(
             "SELECT task_id, agent, status, priority, row_hmac "
             "FROM task_queue WHERE row_hmac IS NOT NULL").fetchall():
         if sig != _task_hmac(tid, agent, st, pri):
             bad += 1
-    # an unsigned row newer than the last signed one = forged insert;
-    # if NO signed rows exist yet, all NULL rows are legacy (honest) -
-    # use max-int as the threshold so nothing is falsely flagged.
-    unsigned = conn.execute(
+    bad += conn.execute(
         "SELECT COUNT(*) FROM task_queue WHERE row_hmac IS NULL "
         "AND id > COALESCE((SELECT MAX(id) FROM task_queue "
         "WHERE row_hmac IS NOT NULL), 9223372036854775807)"
     ).fetchone()[0]
-    bad += unsigned
-    # tasks rows are signed too - a forged description/audit_entry_id
-    # must fail recomputation (both tables of the work record are covered).
     for ag, pri, desc, eid, sig in conn.execute(
             "SELECT agent, priority, description, audit_entry_id, "
             "row_hmac FROM tasks WHERE row_hmac IS NOT NULL").fetchall():
         if sig != _row_hmac(ag, pri, desc, eid):
             bad += 1
-    tunsigned = conn.execute(
+    bad += conn.execute(
         "SELECT COUNT(*) FROM tasks WHERE row_hmac IS NULL "
         "AND id > COALESCE((SELECT MAX(id) FROM tasks "
         "WHERE row_hmac IS NOT NULL), 9223372036854775807)"
     ).fetchone()[0]
-    bad += tunsigned
-    return {"ok": bad == 0, "broken_at": None, "entries": len(rows),
-            "triggers_missing": missing, "forged_tasks": bad,
+    return bad
+
+
+def _verify_task_signatures(conn: sqlite3.Connection) -> dict:
+    bad = _forged_work_records(conn)
+    return {"ok": bad == 0, "broken_at": None,
+            "forged_tasks": bad,
             "reason": f"{bad} forged work-record row(s) - invalid "
                       "signature" if bad else None}
 

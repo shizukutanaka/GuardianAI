@@ -416,9 +416,17 @@ def _status_payload(conn, executor):
     count = conn.execute("SELECT COUNT(*) FROM audit_logs").fetchone()[0]
     tip_ok = (bool(state) and count == state[0]
               and (last[1] or "") == (state[1] or ""))
-    chain = {"ok": tip_ok, "entries": count,
-             "tip": "chain_state head matches last row" if tip_ok
-                    else "tip/state mismatch - run verify"}
+    # the badge must also surface work-record forgery - an intact audit
+    # chain does not prove tasks/task_queue were not fabricated, and
+    # 'tip ok' beside forged rows would mislead.
+    from guardian_ai.db import _forged_work_records
+    forged = _forged_work_records(conn)
+    chain = {"ok": tip_ok and forged == 0, "entries": count,
+             "forged_tasks": forged,
+             "tip": ("chain_state head matches last row" if tip_ok
+                     else "tip/state mismatch - run verify") +
+                  (f"; {forged} forged work-record row(s)"
+                   if forged else "")}
     ollama = executor.llm
     return {"audit_entries": count,
             "quick_check": conn.execute("PRAGMA quick_check").fetchone()[0],
