@@ -265,7 +265,8 @@ def _state_hmac(row_count: int, head: str) -> str:
                     hashlib.sha256).hexdigest()
 
 
-def _update_chain_state(conn: sqlite3.Connection) -> None:
+def _update_chain_state(conn: sqlite3.Connection,
+                        commit: bool = True) -> None:
     row = conn.execute(
         "SELECT COUNT(*), (SELECT chain_hash FROM audit_logs "
         "ORDER BY id DESC LIMIT 1) FROM audit_logs").fetchone()
@@ -275,7 +276,8 @@ def _update_chain_state(conn: sqlite3.Connection) -> None:
         "row_count=excluded.row_count, head=excluded.head, "
         "state_hmac=excluded.state_hmac",
         (row[0], row[1] or "", _state_hmac(row[0], row[1] or "")))
-    conn.commit()
+    if commit:
+        conn.commit()
 
 
 def _resync_chain_state(conn: sqlite3.Connection) -> None:
@@ -307,8 +309,12 @@ def audit_log(conn: sqlite3.Connection, agent: str, request: str,
             "INSERT INTO audit_logs (agent, request, result, timestamp, "
             "latency_ms, chain_hash) VALUES (?, ?, ?, ?, ?, ?)",
             (agent, request, result, ts, latency_ms, h))
+        # one transaction: the row insert + chain_state update commit
+        # together, so a crash can never leave a committed row beside a
+        # stale state (which would read as 'tail deleted' - a false
+        # tamper report).
+        _update_chain_state(conn, commit=False)
         conn.commit()
-        _update_chain_state(conn)
         return cur.lastrowid
 
 
