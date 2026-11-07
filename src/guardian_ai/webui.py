@@ -72,13 +72,18 @@ _forged_cache = {"count": -1, "forged": 0}
 
 def _log_error(msg: str) -> None:
     """Persist request-handling errors - stderr alone is lost once the
-    server's terminal closes, so a file log keeps failures debuggable."""
+    server's terminal closes, so a file log keeps failures debuggable.
+    The log is bounded (last 200 lines) so it cannot fill the disk over
+    time - an unbounded error log would repeat the audit-growth problem."""
     try:
         from guardian_ai.paths import data_dir
         from datetime import datetime
         log = data_dir() / "webui-errors.log"
-        with log.open("a", encoding="utf-8") as f:
-            f.write(f"{datetime.now():%Y-%m-%d %H:%M:%S} {msg}\n")
+        lines = []
+        if log.exists():
+            lines = log.read_text(encoding="utf-8").splitlines()[-199:]
+        lines.append(f"{datetime.now():%Y-%m-%d %H:%M:%S} {msg}")
+        log.write_text("\n".join(lines) + "\n", encoding="utf-8")
     except Exception:
         pass  # logging must never break the request path
 
