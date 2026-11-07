@@ -391,6 +391,15 @@ async function doDecrypt(){
     const r=await fetch('/api/decrypt',{method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({path})}).then(r=>r.json());
+    // non-JSON payloads return {decrypted} with no entries - show the
+    // text (esc via textContent) instead of 'undefined entries'.
+    if(r.decrypted!=null){
+      $('result').classList.add('show');
+      $('result-head').innerHTML=badge('DECRYPTED','acc');
+      $('result-body').textContent=r.decrypted;
+      toast('decrypted (not JSON)',r.reason||'');
+      return;
+    }
     toast(r.ok?`verified: ${r.entries} entries reach signed head`
              :`INVALID: ${r.reason}`,r.anchor||'');
   }catch(e){toast('decrypt failed',e.message)}
