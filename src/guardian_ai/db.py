@@ -78,6 +78,7 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
             priority TEXT DEFAULT 'medium',
             description TEXT,
             audit_entry_id INTEGER,
+            row_hmac TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -214,6 +215,9 @@ def _migrate_chain_hash(conn: sqlite3.Connection) -> None:
     if q_cols and "row_hmac" not in q_cols:
         conn.execute("ALTER TABLE task_queue ADD COLUMN row_hmac TEXT")
         conn.commit()
+    if task_cols and "row_hmac" not in task_cols:
+        conn.execute("ALTER TABLE tasks ADD COLUMN row_hmac TEXT")
+        conn.commit()
 
 
 def _backfill_chain(conn: sqlite3.Connection) -> None:
@@ -237,15 +241,19 @@ def _backfill_chain(conn: sqlite3.Connection) -> None:
         conn.commit()
 
 
-def _task_hmac(task_id: int, agent: str, status: str,
-               priority: str) -> str:
-    """HMAC a task_queue row so a forged INSERT is detectable - an
+def _row_hmac(*parts) -> str:
+    """HMAC a work-record row so a forged INSERT is detectable - an
     attacker can add rows but cannot compute a valid signature without
     the KMS-protected key."""
     from guardian_ai.kms import get_key
-    body = f"{task_id}|{agent}|{status}|{priority}"
+    body = "|".join(str(p) for p in parts)
     return hmac.new(get_key("audit_chain"), body.encode("utf-8"),
                     hashlib.sha256).hexdigest()
+
+
+def _task_hmac(task_id: int, agent: str, status: str,
+               priority: str) -> str:
+    return _row_hmac(task_id, agent, status, priority)
 
 
 def _state_hmac(row_count: int, head: str) -> str:
@@ -363,9 +371,22 @@ def verify_audit_chain(conn: sqlite3.Connection) -> dict:
         "WHERE row_hmac IS NOT NULL), 9223372036854775807)"
     ).fetchone()[0]
     bad += unsigned
+    # tasks rows are signed too - a forged description/audit_entry_id
+    # must fail recomputation (both tables of the work record are covered).
+    for ag, pri, desc, eid, sig in conn.execute(
+            "SELECT agent, priority, description, audit_entry_id, "
+            "row_hmac FROM tasks WHERE row_hmac IS NOT NULL").fetchall():
+        if sig != _row_hmac(ag, pri, desc, eid):
+            bad += 1
+    tunsigned = conn.execute(
+        "SELECT COUNT(*) FROM tasks WHERE row_hmac IS NULL "
+        "AND id > COALESCE((SELECT MAX(id) FROM tasks "
+        "WHERE row_hmac IS NOT NULL), 9223372036854775807)"
+    ).fetchone()[0]
+    bad += tunsigned
     return {"ok": bad == 0, "broken_at": None, "entries": len(rows),
             "triggers_missing": missing, "forged_tasks": bad,
-            "reason": f"{bad} forged task_queue row(s) - invalid "
+            "reason": f"{bad} forged work-record row(s) - invalid "
                       "signature" if bad else None}
 
 
@@ -395,8 +416,10 @@ def record_tasks(conn: sqlite3.Connection, agent: str, complexity: str,
             # 'skipped' is honest when a gate (e.g. PHI) stopped the run
         desc = step.get("description") or step.get("text") or stype
         cur = conn.execute(
-            "INSERT INTO tasks (agent, priority, description, audit_entry_id) "
-            "VALUES (?, ?, ?, ?)", (agent, priority, desc, audit_entry_id))
+            "INSERT INTO tasks (agent, priority, description, "
+            "audit_entry_id, row_hmac) VALUES (?, ?, ?, ?, ?)",
+            (agent, priority, desc, audit_entry_id,
+             _row_hmac(agent, priority, desc, audit_entry_id)))
         tid = cur.lastrowid
         conn.execute(
             "INSERT INTO task_queue (task_id, agent, status, priority, "
