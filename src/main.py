@@ -180,6 +180,12 @@ def main() -> None:
                            f"audit-{datetime.now():%Y%m%d-%H%M%S}.db")
                     dst.parent.mkdir(parents=True, exist_ok=True)
                     conn.execute("VACUUM INTO ?", (str(dst),))
+                    # keep only the latest 10 backups - an unbounded
+                    # folder would repeat the audit-growth problem it
+                    # was meant to solve.
+                    snaps = sorted(dst.parent.glob("audit-*.db"))
+                    for old in snaps[:-10]:
+                        old.unlink()
                     print(f"backup: {dst}")
                 except Exception as e:
                     print(f"backup failed: {e}")
