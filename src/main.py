@@ -35,6 +35,7 @@ HELP = """Commands:
   status --json machine-readable status (audit_integrity as JSON)
   verify --json machine-readable chain verify (ok/broken/forged as JSON)
   history --json [N] machine-readable audit history (latest N as JSON)
+  backup --json machine-readable backup path ({path} as JSON)
   export        write ALL audit entries + work record to an encrypted .enc file
   backup        snapshot the whole DB to backups/ (consistent VACUUM INTO)
   decrypt FILE  decrypt an .enc export with the local KMS key
@@ -215,10 +216,11 @@ def main() -> None:
                 except RuntimeError as e:
                     print(f"export failed: {e}")
                 continue
-            if cmd == "backup":
+            if cmd == "backup" or cmd == "backup --json":
                 # VACUUM INTO gives a consistent DB snapshot (unlike a
                 # raw file copy, which can catch a mid-write page) - the
                 # audit trail can be archived without weakening it.
+                json_out = cmd.endswith("--json")
                 try:
                     from guardian_ai.paths import data_dir
                     from datetime import datetime
@@ -232,9 +234,18 @@ def main() -> None:
                     snaps = sorted(dst.parent.glob("audit-*.db"))
                     for old in snaps[:-10]:
                         old.unlink()
-                    print(f"backup: {dst}")
+                    if json_out:
+                        import json as _json
+                        print(_json.dumps({"path": str(dst)},
+                                          ensure_ascii=False))
+                    else:
+                        print(f"backup: {dst}")
                 except Exception as e:
-                    print(f"backup failed: {e}")
+                    if json_out:
+                        import json as _json
+                        print(_json.dumps({"error": str(e)}))
+                    else:
+                        print(f"backup failed: {e}")
                 continue
             if cmd.startswith("decrypt "):
                 target = Path(user_input[8:].strip())
