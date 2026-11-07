@@ -156,8 +156,11 @@ def main() -> None:
                     print(f"chain ok: {v['entries']} entries verified "
                           "(HMAC chain + chain_state head/count)")
                 else:
-                    print(f"chain BROKEN at #{v['broken_at']}: "
-                          f"{v.get('reason','')}")
+                    # broken_at is None for forged tasks / missing
+                    # chain_state / trigger issues - '#None' is a wrong
+                    # display, so show the reason alone there.
+                    at = f" at #{v['broken_at']}" if v.get("broken_at") else ""
+                    print(f"chain BROKEN{at}: {v.get('reason','')}")
                 continue
             if cmd == "export":
                 try:
