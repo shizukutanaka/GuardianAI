@@ -598,7 +598,16 @@ class _Handler(BaseHTTPRequestHandler):
                 self.rfile.read(length).decode("utf-8") or "{}")
             path = Path(str(payload.get("path", "")).strip())
             raw = Encryption().decrypt(path.read_text(encoding="utf-8"))
-            data = json.loads(raw)
+            try:
+                data = json.loads(raw)
+            except ValueError:
+                # same as the CLI: a non-JSON payload is just shown, not
+                # a 500 - the decrypt itself still worked.
+                self._send(200, json.dumps(
+                    {"ok": True, "decrypted": raw[:2000],
+                     "reason": "not JSON - raw payload returned"},
+                    ensure_ascii=False))
+                return
             st = data.get("chain_state")
             out = {"ok": False, "reason": "no chain_state in export"}
             if st and st.get("state_hmac") == _state_hmac(
