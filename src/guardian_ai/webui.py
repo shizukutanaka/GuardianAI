@@ -415,7 +415,13 @@ class _Handler(BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
-        conn = _conn()
+        # A failed pool acquire (DB locked, disk full) must not drop the
+        # connection silently - report it so the UI can show a real state.
+        try:
+            conn = _conn()
+        except Exception as e:
+            self._send(503, json.dumps({"error": f"db unavailable: {e}"}))
+            return
         try:
             self._route_get(conn)
         finally:
@@ -491,7 +497,7 @@ class _Handler(BaseHTTPRequestHandler):
             if not text:
                 self._send(400, json.dumps({"error": "empty request"}))
                 return
-            conn = _conn()
+            conn = _conn()  # raises are caught by the outer boundary
             try:
                 # Same gate as the CLI (Socratic): never silently write to
                 # a compromised audit trail - require explicit client ack.
