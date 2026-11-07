@@ -35,9 +35,10 @@ HOST, PORT = "127.0.0.1", 8765
 # single request. Pool the connections instead: check one out, hand it
 # back when done. init cost is paid once per concurrent slot, not per
 # request.
-_pool: "queue.Queue[sqlite3.Connection]" = queue.Queue()
-_pool_init = threading.Lock()
 _POOL_SIZE = 4
+_pool: "queue.Queue[sqlite3.Connection]" = queue.Queue(
+    maxsize=_POOL_SIZE)
+_pool_init = threading.Lock()
 
 
 def _conn():
