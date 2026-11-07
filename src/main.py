@@ -168,6 +168,11 @@ def main() -> None:
                     n = int(cmd.split()[1]) if cmd != "history" else 10
                 except (IndexError, ValueError):
                     n = 10
+                # same gate as export/backup - warn before showing a
+                # compromised trail, don't silently present tampered data.
+                if not verify_audit_chain(conn).get("ok"):
+                    print("WARNING: audit chain is broken - entries may "
+                          "be tampered")
                 show_history(conn, max(1, n))
                 continue
             if cmd == "ui":
