@@ -64,6 +64,11 @@ def _release(conn) -> None:
     except queue.Full:
         conn.close()
 
+
+# forged-task check cached on row count - recomputing every signature
+# each 10s poll is O(#signed rows) and wasteful when nothing changed.
+_forged_cache = {"count": -1, "forged": 0}
+
 _HTML = r"""<!doctype html>
 <html lang="ja" data-theme="dark">
 <head>
@@ -406,7 +411,12 @@ async function doDecrypt(){
 }
 /* ---------- keys ---------- */
 $('req').addEventListener('keydown',e=>{if(e.key==='Enter')submit()});
-refresh();setInterval(refresh,10000);
+/* refresh stacking: skip a poll while one is still in flight - a slow
+   status call (>10s) would otherwise queue overlapping refreshes. */
+let _refreshing=false;
+const refreshOnce=()=>{if(_refreshing)return;_refreshing=true;
+  refresh().finally(()=>_refreshing=false);};
+refreshOnce();setInterval(refreshOnce,10000);
 </script>
 </body></html>"""
 
@@ -429,9 +439,18 @@ def _status_payload(conn, executor):
               and (last[1] or "") == (state[1] or ""))
     # the badge must also surface work-record forgery - an intact audit
     # chain does not prove tasks/task_queue were not fabricated, and
-    # 'tip ok' beside forged rows would mislead.
-    from guardian_ai.db import _forged_work_records
-    forged = _forged_work_records(conn)
+    # 'tip ok' beside forged rows would mislead. The check is O(#signed
+    # rows), so cache it on row count - a new row re-verifies, no change
+    # reuses the result (signatures cannot change without a row change).
+    global _forged_cache
+    task_count = conn.execute(
+        "SELECT (SELECT COUNT(*) FROM tasks)+"
+        "(SELECT COUNT(*) FROM task_queue)").fetchone()[0]
+    if _forged_cache.get("count") != task_count:
+        from guardian_ai.db import _forged_work_records
+        forged = _forged_work_records(conn)
+        _forged_cache = {"count": task_count, "forged": forged}
+    forged = _forged_cache["forged"]
     chain = {"ok": tip_ok and forged == 0, "entries": count,
              "forged_tasks": forged,
              "tip": ("chain_state head matches last row" if tip_ok
