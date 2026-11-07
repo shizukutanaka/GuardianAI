@@ -477,29 +477,32 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send(400, json.dumps({"error": "empty request"}))
                 return
             conn = _conn()
-            # Same gate as the CLI (Socratic): never silently write to a
-            # compromised audit trail - require explicit client ack.
-            chain = verify_audit_chain(conn)
-            if not chain.get("ok") and not payload.get("ack_broken"):
-                _release(conn)
-                self._send(409, json.dumps({
-                    "error": "chain_broken",
-                    "broken_at": chain.get("broken_at"),
-                    "reason": chain.get("reason", "")}))
-                return
-            result = self.server.router.analyze(text)
-            t0 = time.monotonic()
-            result["execution"] = self.server.executor.execute(text, result)
-            latency_ms = int((time.monotonic() - t0) * 1000)
-            # audit first so tasks link to their entry; secrets are
-            # redacted before storage (deleted, not processed).
-            entry_id = audit_log(conn, result["agent"],
-                                 redact(text), redact(str(result)),
-                                 latency_ms=latency_ms)
-            record_tasks(conn, result["agent"], result["complexity"],
-                         result["tasks"], result["execution"].get("steps"),
-                         audit_entry_id=entry_id)
-            _release(conn)
+            try:
+                # Same gate as the CLI (Socratic): never silently write to
+                # a compromised audit trail - require explicit client ack.
+                chain = verify_audit_chain(conn)
+                if not chain.get("ok") and not payload.get("ack_broken"):
+                    self._send(409, json.dumps({
+                        "error": "chain_broken",
+                        "broken_at": chain.get("broken_at"),
+                        "reason": chain.get("reason", "")}))
+                    return
+                result = self.server.router.analyze(text)
+                t0 = time.monotonic()
+                result["execution"] = self.server.executor.execute(
+                    text, result)
+                latency_ms = int((time.monotonic() - t0) * 1000)
+                # audit first so tasks link to their entry; secrets are
+                # redacted before storage (deleted, not processed).
+                entry_id = audit_log(conn, result["agent"],
+                                     redact(text), redact(str(result)),
+                                     latency_ms=latency_ms)
+                record_tasks(conn, result["agent"], result["complexity"],
+                             result["tasks"],
+                             result["execution"].get("steps"),
+                             audit_entry_id=entry_id)
+            finally:
+                _release(conn)  # returned to the pool on every path
             self._send(200, json.dumps({
                 "entry_id": entry_id,
                 "agent": result["agent"],
