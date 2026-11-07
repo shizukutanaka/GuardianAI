@@ -15,6 +15,7 @@ UX contract (first principles):
     status is computed, never decorative.
 """
 import json
+import queue
 import threading
 import time
 import webbrowser
@@ -28,16 +29,33 @@ from guardian_ai.router import Router
 
 HOST, PORT = "127.0.0.1", 8765
 
-# ThreadingHTTPServer runs each request in its own thread, but a sqlite3
-# connection is bound to the thread that created it - give every worker
-# thread its own connection (init is idempotent, so this is cheap).
-_local = threading.local()
+# ThreadingHTTPServer runs each request in a NEW thread, but a sqlite3
+# connection is bound to its creating thread - so per-thread storage
+# would re-run init_database() (~200ms: schema+migrations+seed) on every
+# single request. Pool the connections instead: check one out, hand it
+# back when done. init cost is paid once per concurrent slot, not per
+# request.
+_pool: "queue.Queue[sqlite3.Connection]" = queue.Queue()
+_pool_init = threading.Lock()
+_POOL_SIZE = 4
 
 
 def _conn():
-    if not hasattr(_local, "conn"):
-        _local.conn = init_database()
-    return _local.conn
+    try:
+        return _pool.get_nowait()
+    except queue.Empty:
+        with _pool_init:
+            try:
+                return _pool.get_nowait()
+            except queue.Empty:
+                return init_database()
+
+
+def _release(conn) -> None:
+    try:
+        _pool.put_nowait(conn)
+    except queue.Full:
+        conn.close()
 
 _HTML = r"""<!doctype html>
 <html lang="ja" data-theme="dark">
@@ -386,6 +404,12 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         conn = _conn()
+        try:
+            self._route_get(conn)
+        finally:
+            _release(conn)
+
+    def _route_get(self, conn):
         if self.path in ("/", "/index.html"):
             self._send(200, _HTML, "text/html; charset=utf-8")
         elif self.path == "/api/status":
@@ -457,6 +481,7 @@ class _Handler(BaseHTTPRequestHandler):
             # compromised audit trail - require explicit client ack.
             chain = verify_audit_chain(conn)
             if not chain.get("ok") and not payload.get("ack_broken"):
+                _release(conn)
                 self._send(409, json.dumps({
                     "error": "chain_broken",
                     "broken_at": chain.get("broken_at"),
@@ -474,6 +499,7 @@ class _Handler(BaseHTTPRequestHandler):
             record_tasks(conn, result["agent"], result["complexity"],
                          result["tasks"], result["execution"].get("steps"),
                          audit_entry_id=entry_id)
+            _release(conn)
             self._send(200, json.dumps({
                 "entry_id": entry_id,
                 "agent": result["agent"],

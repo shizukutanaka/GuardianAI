@@ -27,7 +27,10 @@ AGENTS = [
 
 def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
     """Initialize schema, seed agents, and return an open connection."""
-    conn = sqlite3.connect(db_path)
+    # check_same_thread=False lets the web UI pool connections across
+    # request threads; SQLite itself is serialised so this is safe, and
+    # _chain_lock covers the audit append critical section.
+    conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
 
