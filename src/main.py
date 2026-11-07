@@ -260,7 +260,11 @@ def main() -> None:
                 rows = _forged_rows(conn)
                 if cmd.endswith("--json"):
                     import json as _json
-                    print(_json.dumps(rows, ensure_ascii=False))
+                    # same object shape as the other --json commands -
+                    # a bare list is inconsistent with the surface.
+                    print(_json.dumps(
+                        {"count": len(rows), "forged_tasks": rows},
+                        ensure_ascii=False))
                 else:
                     if not rows:
                         print("no forged work-record rows")
