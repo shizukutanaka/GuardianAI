@@ -159,10 +159,16 @@ def main() -> None:
                         "SELECT id, agent, request, result, timestamp, "
                         "latency_ms FROM audit_logs ORDER BY id DESC "
                         "LIMIT ?", (max(1, lim),)).fetchall()
+                    # same warning as text history - the --json variant
+                    # must not silently skip the broken-chain signal.
+                    broken = not verify_audit_chain(conn).get("ok")
                     print(_json.dumps(
-                        [{"id": r[0], "agent": r[1], "request": r[2],
-                          "result": r[3], "timestamp": r[4],
-                          "latency_ms": r[5]} for r in rows],
+                        {"chain_broken": broken,
+                         "entries": [{"id": r[0], "agent": r[1],
+                                      "request": r[2], "result": r[3],
+                                      "timestamp": r[4],
+                                      "latency_ms": r[5]}
+                                     for r in rows]},
                         ensure_ascii=False))
                     continue
                 try:
@@ -197,10 +203,15 @@ def main() -> None:
                           "invalid signature")
                 if cmd.endswith("--json"):
                     import json as _json
+                    from guardian_ai.db import _forged_work_records
+                    forged = _forged_work_records(conn)
                     print(_json.dumps(
-                        [{"status": r[0], "agent": r[1],
-                          "description": r[2], "created_at": r[3]}
-                         for r in rows], ensure_ascii=False))
+                        {"forged_tasks": forged,
+                         "tasks": [{"status": r[0], "agent": r[1],
+                                    "description": r[2],
+                                    "created_at": r[3]}
+                                   for r in rows]},
+                        ensure_ascii=False))
                 else:
                     if not rows:
                         print("no tasks")
@@ -252,11 +263,14 @@ def main() -> None:
                     print(f"chain BROKEN{at}: {v.get('reason','')}")
                 continue
             if cmd == "export --json":
-                # machine-readable export path for automation.
+                # machine-readable export path for automation - same
+                # broken-chain signal as the text export, not skipped.
                 import json as _json
+                broken = not verify_audit_chain(conn).get("ok")
                 try:
                     print(_json.dumps(
-                        {"path": export_audit(conn)},
+                        {"path": export_audit(conn),
+                         "chain_broken": broken},
                         ensure_ascii=False))
                 except RuntimeError as e:
                     print(_json.dumps({"error": str(e)}))
