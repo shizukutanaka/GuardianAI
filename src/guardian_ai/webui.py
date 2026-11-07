@@ -313,7 +313,15 @@ async function loadTables(){
      :'<tr><td colspan="5" class="empty">no entries yet</td></tr>');
   const t=await J('/api/tasks');
   const sc={done:'ok',blocked:'bad',failed:'bad',skipped:'warn',pending:'warn'};
+  // parity with the CLI 'forged' command - the UI needs to see WHICH
+  // rows are fabricated, not just 'tip broken' (was /api/forged dead code).
+  const fg=await J('/api/forged');
+  const forgedRows=fg.length?'<tr><td colspan="3" class="dim" '+
+    'style="color:var(--bad)">'+fg.map(r=>
+      `[${esc(r.table)}] #${r.id} ${esc(r.agent)} `+
+      `(${esc(r.reason||'')})`).join('<br>')+'</td></tr>':'';
   $('tasks').innerHTML='<tr><th>agent</th><th>status</th><th>description</th></tr>'+
+    forgedRows+
     (t.length?t.map(r=>`<tr><td>${esc(r.agent)}</td>
      <td>${badge(r.status,sc[r.status]||'warn')}</td>
      <td class="dim">${esc(r.description||'')}</td></tr>`).join('')
