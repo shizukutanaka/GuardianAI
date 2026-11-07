@@ -261,8 +261,10 @@ async function refresh(){
     const s=await J('/api/status');
     const chain=s.chain||{};
     $('health').innerHTML=
+      // the ambient check only verifies the tip (head/count match) -
+      // 'chain ok' would overclaim full verification (verify runs it).
       `<span class="dot ${chain.ok?'ok':'bad'}"><i></i>${
-        chain.ok?'chain ok':'chain broken'}</span>`+
+        chain.ok?'tip ok':'tip broken'}</span>`+
       `<span class="dot ${s.ollama_up?'ok':'warn'}"><i></i>${
         s.ollama_up?(s.models[0]||'model'):'deterministic'}</span>`+
       `<span class="dot"><i></i>${s.audit_entries} entries</span>`+
