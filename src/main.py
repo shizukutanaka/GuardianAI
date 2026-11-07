@@ -234,6 +234,12 @@ def main() -> None:
                     print(_json.dumps({"error": str(e)}))
                 continue
             if cmd == "export":
+                # never silently snapshot a compromised trail - the same
+                # gate as a request write: warn before exporting broken
+                # data so the user knows the snapshot is suspect.
+                if not verify_audit_chain(conn).get("ok"):
+                    print("WARNING: audit chain is broken - this export "
+                          "captures compromised data")
                 try:
                     print(f"exported: {export_audit(conn)}")
                 except RuntimeError as e:
