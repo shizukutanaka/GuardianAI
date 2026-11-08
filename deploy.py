@@ -31,11 +31,18 @@ def _zipapp_filter(path: Path) -> bool:
 
 def build() -> bool:
     DIST.mkdir(exist_ok=True)
-    target = DIST / "shieldai.pyz"
+    import shutil
+    sys.path.insert(0, str(SRC))
+    from guardian_ai import __version__
+    # versioned artifact (like the exe/installer naming) + a
+    # shieldai.pyz copy so `python dist/shieldai.pyz` still works.
+    target = DIST / f"shieldai-{__version__}.pyz"
     zipapp.create_archive(SRC, target=str(target), main="main:main",
                           filter=_zipapp_filter, compressed=True)
+    simple = DIST / "shieldai.pyz"
+    shutil.copy2(target, simple)
     print(f"[OK] built {target} ({target.stat().st_size} bytes)")
-    print(f"     run: {sys.executable} {target}")
+    print(f"     run: {sys.executable} {simple}")
     return True
 
 
