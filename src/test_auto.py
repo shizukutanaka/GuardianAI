@@ -171,7 +171,7 @@ def test():
         assert out['status'] == 'done' and out['llm_model'] is None
 """ + FOOTER,
 
-    "chain": HEADER + """  # nosec B608 - template contains literal SQL for trigger tests, no interpolation
+    "chain": HEADER + """
 def test():
     import os, tempfile
     from guardian_ai.db import init_database, audit_log, verify_audit_chain
@@ -198,7 +198,7 @@ def test():
         conn.commit()
         assert verify_audit_chain(conn)['ok'] is False
         conn.close()
-""" + FOOTER,
+""" + FOOTER,  # nosec B608 - template has literal SQL for trigger tests, no interpolation
 
     "export": HEADER + """
 def test():
