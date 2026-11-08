@@ -977,12 +977,26 @@ def serve(port: int = PORT, open_browser: bool = True,
         httpd = ThreadingHTTPServer((HOST, port), _Handler)
     except OSError as e:
         # a second instance can't bind - the first is already serving.
-        # Report it honestly instead of dropping a traceback into
-        # crash.log (double-clicking the exe twice IS a product path).
+        # Open the dashboard via the saved token URL (data_dir is
+        # user-private) instead of telling a non-technical user to find
+        # a URL in a console they may have closed.
         if getattr(e, "errno", None) in (98, 48, 10048):
-            print(f"ShieldAI is already running on "
-                  f"http://{HOST}:{port} - use the URL printed by the "
-                  f"first instance (it holds the session token).")
+            saved = None
+            try:
+                from guardian_ai.paths import data_dir
+                saved = (data_dir() / "ui_url.txt").read_text(
+                    encoding="utf-8").strip()
+            except Exception:
+                pass
+            if saved:
+                print(f"ShieldAI is already running - opening "
+                      f"{saved.split('?')[0]}")
+                if open_browser:
+                    webbrowser.open(saved)
+            else:
+                print(f"ShieldAI is already running on "
+                      f"http://{HOST}:{port} - use the URL printed by "
+                      f"the first instance.")
             return
         raise
     httpd.router = Router()
@@ -993,6 +1007,16 @@ def serve(port: int = PORT, open_browser: bool = True,
     url = f"http://{HOST}:{port}/?t={httpd.token}"
     if lang:
         url += f"&lang={lang}"
+    # save the URL so a second launch can open the running dashboard
+    # (the token lives in the user-private data dir - same trust
+    # boundary as localhost itself).
+    url_file = None
+    try:
+        from guardian_ai.paths import data_dir
+        url_file = data_dir() / "ui_url.txt"
+        url_file.write_text(url, encoding="utf-8")
+    except Exception:
+        url_file = None
     print(f"ShieldAI UI: {url}  (Ctrl+C to stop)")
     if open_browser:
         webbrowser.open(url)
@@ -1000,3 +1024,12 @@ def serve(port: int = PORT, open_browser: bool = True,
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
+    finally:
+        # a stale ui_url.txt would let a LATER instance open a dead
+        # session - remove it when this server goes away.
+        try:
+            if url_file:
+                url_file.unlink()
+        except Exception:
+            pass
+        httpd.server_close()
