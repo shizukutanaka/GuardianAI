@@ -121,6 +121,7 @@ _CLI_STR["en"]["help"] = """Commands:
   status        show audit integrity and queue stats
   status --json machine-readable status (audit_integrity as JSON)
   verify --json machine-readable chain verify (ok/broken/forged as JSON)
+  verify <file.db> verify a backup file's chain (tampered/outdated = BROKEN)
   forged [--json] list forged work-record rows (invalid/unsigned signatures)
   history --json [N] machine-readable audit history (latest N as JSON)
   backup --json machine-readable backup path ({path} as JSON)
@@ -699,8 +700,25 @@ def main() -> None:
                     print(f"community edition ({st['reason']}) - "
                           "support: github.com/sponsors/shizukutanaka")
                 continue
-            if cmd == "verify":
-                v = verify_audit_chain(conn)
+            if cmd == "verify" or cmd.startswith("verify "):
+                # 'verify <file.db>' checks a backup's chain against the
+                # live KMS chain_state - a backup that doesn't match is
+                # tampered-or-outdated, not trustworthy.
+                parts = cmd.split()
+                if len(parts) > 1:
+                    import sqlite3 as _sqlite3
+                    try:
+                        fconn = _sqlite3.connect(parts[1])
+                    except Exception as e:
+                        print(f"cannot open {parts[1]}: {e}")
+                        continue
+                    try:
+                        v = verify_audit_chain(fconn)
+                    finally:
+                        fconn.close()
+                    v["file"] = parts[1]
+                else:
+                    v = verify_audit_chain(conn)
                 if v["ok"]:
                     print(f"chain ok: {v['entries']} entries verified "
                           "(HMAC chain + chain_state head/count)")
