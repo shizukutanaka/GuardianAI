@@ -47,12 +47,18 @@ it here (this list went stale twice when features landed). Notes:
 
 ## Environment quirks
 - SHIELDAI_DATA_DIR=D:\shieldai-data (setx'd) holds DB + KMS keys +
-  crash.log + shieldai.license.
+  crash.log + shieldai.license + ui_url.txt.
 - Ollama portable at D:\ollama; start with `start-ollama.cmd`.
 - GPU: RTX A2000 12GB; inference ~6s; deterministic mode works w/o GPU.
 - venv is a 32-bit Python - if cryptography's _rust DLL breaks,
   force-reinstall: `venv/Scripts/python -m pip install
   --force-reinstall --no-cache-dir "cryptography>=41,<46"`.
+- SHIELDAI_NO_NETWORK=1 closes the only outbound call (update/report/
+  /api/update) - hard-cut for air-gapped installs.
+- PyInstaller 64-bit bootloader can be missing after a C: disk-full
+  partial install - repair by extracting it from the wheel into
+  venv/Lib/site-packages/PyInstaller/bootloader/Windows-64bit-intel/.
+- D:\pyi-tmp has an irremovable empty dir (FS quirk - harmless).
 
 ## Conventions
 - Never fabricate: unknowns report verified/unverified/needs_human.

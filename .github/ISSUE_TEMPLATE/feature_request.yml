@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest an improvement - the bar is that claims match behavior
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ShieldAI's core claim is that **claims match behavior**. A feature
+        that overclaims ("chain ok" on a tip check, "verified" without
+        running it) will be pushed back on.
+  - type: textarea
+    id: what
+    attributes:
+      label: What should it do?
+      description: The user-facing behavior - not the implementation
+    validations:
+      required: true
+  - type: textarea
+    id: honesty
+    attributes:
+      label: How does it keep claims honest?
+      description: What it must NOT claim (e.g. no 'verified' unless
+        it actually ran the full check, no outbound call without
+        user-invocation, no LLM output as fact)
+    validations:
+      required: false
