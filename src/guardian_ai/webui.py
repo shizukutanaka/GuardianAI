@@ -854,9 +854,11 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(500, json.dumps({"error": str(e)}))
 
 
-def serve(port: int = PORT, open_browser: bool = True) -> None:
+def serve(port: int = PORT, open_browser: bool = True,
+          lang: str = None) -> None:
     """Start the local UI server. Binds 127.0.0.1 only - nothing
-    is exposed beyond the loopback interface."""
+    is exposed beyond the loopback interface. `lang` presets the UI
+    locale via ?lang= (same mechanism the header selector writes)."""
     httpd = ThreadingHTTPServer((HOST, port), _Handler)
     httpd.router = Router()
     httpd.executor = Executor()
@@ -864,6 +866,8 @@ def serve(port: int = PORT, open_browser: bool = True) -> None:
     # that can't see the URL can't reach the API.
     httpd.token = secrets.token_urlsafe(24)
     url = f"http://{HOST}:{port}/?t={httpd.token}"
+    if lang:
+        url += f"&lang={lang}"
     print(f"ShieldAI UI: {url}  (Ctrl+C to stop)")
     if open_browser:
         webbrowser.open(url)

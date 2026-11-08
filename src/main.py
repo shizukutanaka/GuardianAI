@@ -50,7 +50,8 @@ HELP = """Commands:
   report [--json] open a pre-filled GitHub issue with diag+crash (opt-in,
                 never auto-sends) / emit the issue body as JSON
   verify        re-run the HMAC audit-chain check explicitly
-  ui            open the local web dashboard (http://127.0.0.1:8765)
+  ui [ja|en]    open the local web dashboard in that locale
+                (http://127.0.0.1:8765)
   help          show this message
   quit          exit
 """
@@ -222,9 +223,13 @@ def main() -> None:
                           "be tampered")
                 show_history(conn, max(1, n))
                 continue
-            if cmd == "ui":
+            if cmd == "ui" or cmd.startswith("ui "):
+                # 'ui en' / 'ui ja' opens the dashboard in that locale -
+                # same ?lang= mechanism the header selector writes.
+                lang = (cmd.split()[1] if cmd.startswith("ui ") else "")
                 from guardian_ai.webui import serve
-                serve()  # blocks until Ctrl+C; returns here on exit
+                serve(lang=lang if lang in ("ja", "en") else None)
+                # blocks until Ctrl+C; returns here on exit
                 continue
             if cmd == "tasks" or cmd == "tasks --json":
                 # parity with the Web UI tasks tab - the work record is
