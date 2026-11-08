@@ -246,6 +246,7 @@ td{padding:8px 10px;border-top:1px solid var(--border);
       <button class="btn ghost" onclick="doVerify()">Verify chain</button>
       <button class="btn ghost" onclick="doExport()">Export audit</button>
       <button class="btn ghost" onclick="doDecrypt()">Decrypt</button>
+      <button class="btn ghost" onclick="doUpdate()">Check updates</button>
     </div>
     <div class="stages" id="stages" aria-live="polite"></div>
     <div class="result" id="result" aria-live="polite">
@@ -348,7 +349,7 @@ async function refresh(){
 /* ---------- tables ---------- */
 async function loadTables(){
   const h=await J('/api/history?n=15');
-  $('audit').innerHTML='<tr><th>#</th><th>agent</th><th>request</th><th>ms</th><th>time</th></tr>'+
+  $('audit').innerHTML='<tr><th scope="col">#</th><th scope="col">agent</th><th scope="col">request</th><th scope="col">ms</th><th scope="col">time</th></tr>'+
     (h.length?h.map(r=>`<tr><td class="mono">${r.id}</td><td>${esc(r.agent)}</td>
      <td class="dim">${esc((r.request||'').slice(0,48))}</td>
      <td class="mono">${r.latency_ms??'-'}</td>
@@ -363,7 +364,7 @@ async function loadTables(){
     'style="color:var(--bad)">'+fg.map(r=>
       `[${esc(r.table)}] #${r.id} ${esc(r.agent)} `+
       `(${esc(r.reason||'')})`).join('<br>')+'</td></tr>':'';
-  $('tasks').innerHTML='<tr><th>agent</th><th>status</th><th>description</th></tr>'+
+  $('tasks').innerHTML='<tr><th scope="col">agent</th><th scope="col">status</th><th scope="col">description</th></tr>'+
     forgedRows+
     (t.length?t.map(r=>`<tr><td>${esc(r.agent)}</td>
      <td>${badge(r.status,sc[r.status]||'warn')}</td>
@@ -449,6 +450,16 @@ async function doVerify(){
              :`chain BROKEN${v.broken_at!=null?' at #'+v.broken_at:''}`,
           v.ok?'':v.reason||'');
   }catch(e){toast('verify failed',e.message)}
+}
+async function doUpdate(){
+  try{
+    const r=await fetch('/api/update',H({method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:'{}'})).then(r=>r.json());
+    toast('update check',
+      r.update_available?`new version ${r.latest} (current ${r.current})`
+        :r.error||`up to date (${r.current})`);
+  }catch(e){toast('update check failed',e.message)}
 }
 async function doExport(){
   try{
@@ -704,6 +715,35 @@ class _Handler(BaseHTTPRequestHandler):
                     {"path": path, "chain_broken": broken}))
             except RuntimeError as e:
                 self._send(500, json.dumps({"error": str(e)}))
+            return
+        if self.path == "/api/update":
+            # same check as the CLI 'update' command - the product's
+            # ONLY outbound call: user-invoked (button), read-only,
+            # sends nothing. No auto-update without signature checks.
+            try:
+                import urllib.request
+                from guardian_ai import __version__
+                req = urllib.request.Request(
+                    "https://api.github.com/repos/shizukutanaka/"
+                    "GuardianAI/releases/latest",
+                    headers={"User-Agent": "shieldai-update-check",
+                             "Accept": "application/vnd.github+json"})
+                rel = json.loads(
+                    urllib.request.urlopen(req, timeout=10).read())
+                latest = str(rel.get("tag_name", "")).lstrip("v")
+
+                def _v(s):
+                    s = str(s).lstrip("v").split("-")[0]
+                    return tuple(int(x) for x in s.split(".")
+                                 if x.isdigit())
+                self._send(200, json.dumps(
+                    {"current": __version__, "latest": latest,
+                     "update_available":
+                         _v(latest) > _v(__version__)}))
+            except Exception as e:
+                self._send(502, json.dumps(
+                    {"error": ("no releases published yet"
+                               if "404" in str(e) else str(e))}))
             return
         if self.path != "/api/request":
             self._send(404, json.dumps({"error": "not found"}))
