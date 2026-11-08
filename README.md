@@ -89,4 +89,6 @@ python -c "import sqlite3; conn=sqlite3.connect('src/guardian_ai/shield_ai.db');
 ```
 
 ## License
-MIT
+MIT - see [LICENSE](LICENSE). Community conduct:
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Security:
+[SECURITY.md](SECURITY.md) + `.well-known/security.txt`.
