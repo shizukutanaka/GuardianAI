@@ -41,7 +41,8 @@ it here (this list went stale twice when features landed). Notes:
 - `--lang ja|en` localizes banner/help/warnings (SHIELDAI_LANG env,
   '--lang', config.json, or OS locale in that order - `config lang xx`
   persists it); `shieldai ui` without an arg opens the dashboard in
-  the persisted locale; `--json` on every command
+  the persisted locale; `--json` on every command (including
+  `verify <file> --json`)
 - `config` persists user prefs to data_dir/config.json - `lang <ja|en>`
   and `no_network <on|off>` (env SHIELDAI_NO_NETWORK is the other source)
 - the Ollama host is deliberately hardcoded to localhost - making it
