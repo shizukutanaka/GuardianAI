@@ -121,7 +121,8 @@ _CLI_STR["en"]["help"] = """Commands:
   status        show audit integrity and queue stats
   status --json machine-readable status (audit_integrity as JSON)
   verify --json machine-readable chain verify (ok/broken/forged as JSON)
-  verify <file.db> verify a backup file's chain (tampered/outdated = BROKEN)
+  verify <file.db> [--json] verify a backup file's chain (tampered/outdated
+                = BROKEN); --json emits the verify result as JSON
   forged [--json] list forged work-record rows (invalid/unsigned signatures)
   history --json [N] machine-readable audit history (latest N as JSON)
   backup --json machine-readable backup path ({path} as JSON)
@@ -706,30 +707,36 @@ def main() -> None:
                           "support: github.com/sponsors/shizukutanaka")
                 continue
             if cmd == "verify" or cmd.startswith("verify "):
-                # 'verify <file.db>' checks a backup's chain against the
-                # live KMS chain_state - a backup that doesn't match is
-                # tampered-or-outdated, not trustworthy.
-                if raw_arg:
+                # 'verify <file.db> [--json]' checks a backup's chain
+                # against the live KMS chain_state - a backup that
+                # doesn't match is tampered-or-outdated, not trustworthy.
+                file_arg = (raw_arg.rsplit("--json", 1)[0].strip()
+                            if "--json" in raw_arg else raw_arg)
+                json_out = "--json" in cmd
+                if file_arg:
                     import os as _os
                     import sqlite3 as _sqlite3
-                    if not _os.path.exists(raw_arg):
-                        print(f"file not found: {raw_arg}")
+                    if not _os.path.exists(file_arg):
+                        print(f"file not found: {file_arg}")
                         continue
                     # mode=ro so a missing path errors instead of
                     # creating an empty file that then fails on
                     # 'no such table: audit_logs'.
                     try:
                         fconn = _sqlite3.connect(
-                            f"file:{raw_arg}?mode=ro", uri=True)
+                            f"file:{file_arg}?mode=ro", uri=True)
                         v = verify_audit_chain(fconn)
-                        v["file"] = raw_arg
+                        v["file"] = file_arg
                         fconn.close()
                     except Exception as e:
-                        print(f"cannot verify {raw_arg}: {e}")
+                        print(f"cannot verify {file_arg}: {e}")
                         continue
                 else:
                     v = verify_audit_chain(conn)
-                if v["ok"]:
+                if json_out:
+                    import json as _json
+                    print(_json.dumps(v, ensure_ascii=False))
+                elif v["ok"]:
                     print(f"chain ok: {v['entries']} entries verified "
                           "(HMAC chain + chain_state head/count)")
                 else:
