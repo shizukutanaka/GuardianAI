@@ -973,7 +973,18 @@ def serve(port: int = PORT, open_browser: bool = True,
     """Start the local UI server. Binds 127.0.0.1 only - nothing
     is exposed beyond the loopback interface. `lang` presets the UI
     locale via ?lang= (same mechanism the header selector writes)."""
-    httpd = ThreadingHTTPServer((HOST, port), _Handler)
+    try:
+        httpd = ThreadingHTTPServer((HOST, port), _Handler)
+    except OSError as e:
+        # a second instance can't bind - the first is already serving.
+        # Report it honestly instead of dropping a traceback into
+        # crash.log (double-clicking the exe twice IS a product path).
+        if getattr(e, "errno", None) in (98, 48, 10048):
+            print(f"ShieldAI is already running on "
+                  f"http://{HOST}:{port} - use the URL printed by the "
+                  f"first instance (it holds the session token).")
+            return
+        raise
     httpd.router = Router()
     httpd.executor = Executor()
     # per-run session token - the URL is the credential. A local process
