@@ -256,6 +256,7 @@ td{padding:8px 10px;border-top:1px solid var(--border);
       <button class="btn ghost" onclick="doUpdate()" data-i18n="actUpdate">Check updates</button>
       <button class="btn ghost" onclick="doDoctor()" data-i18n="actDoctor">Doctor</button>
       <button class="btn ghost" onclick="doReport()" data-i18n="actReport">Report issue</button>
+      <button class="btn ghost" onclick="doBackup()" data-i18n="actBackup">Backup</button>
     </div>
     <div class="stages" id="stages" aria-live="polite"></div>
     <div class="result" id="result" aria-live="polite">
@@ -328,7 +329,10 @@ const STR={
      actDoctor:'環境診断',doctorOk:'全チェック通過',
      doctorFail:'{n} 件のチェックが失敗',
      doctorFailed:'診断に失敗しました',
-     actReport:'問題を報告'},
+     actReport:'問題を報告',actBackup:'バックアップ',
+     backedUp:'バックアップしました',
+     backupBroken:'警告: 監査チェーンが破損 - このバックアップは侵害データを含みます',
+     backupFailed:'バックアップに失敗しました'},
  en:{what:'What should we process?',ph:'e.g. check the log: server failure ERROR 10.0.0.1',
      run:'Run',running:'Running…',
      hint:'Enter to send · classify → plan → deterministic execute → audit (100% local)',
@@ -373,7 +377,10 @@ const STR={
      actDoctor:'Doctor',doctorOk:'all checks passed',
      doctorFail:'{n} check(s) failed',
      doctorFailed:'doctor failed',
-     actReport:'Report issue'}};
+     actReport:'Report issue',actBackup:'Backup',
+     backedUp:'backup written',
+     backupBroken:'WARNING: audit chain is broken - this backup captures compromised data',
+     backupFailed:'backup failed'}};
 const _Q=new URLSearchParams(location.search);
 const _LANG=_Q.get('lang')||sessionStorage.getItem('sl')||
   (navigator.language||'').slice(0,2);
@@ -583,6 +590,15 @@ function doReport(){
   // issue form, nothing is auto-sent (the user fills and submits).
   window.open('https://github.com/shizukutanaka/GuardianAI/issues/new',
               '_blank','noopener');
+}
+async function doBackup(){
+  try{
+    const r=await fetch('/api/backup',H({method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:'{}'})).then(r=>r.json());
+    toast(t('backedUp'),
+      r.chain_broken?t('backupBroken'):(r.path||r.error));
+  }catch(e){toast(t('backupFailed'),e.message)}
 }
 async function doExport(){
   try{
@@ -891,6 +907,26 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send(502, json.dumps(
                     {"error": ("no releases published yet"
                                if "404" in str(e) else str(e))}))
+            return
+        if self.path == "/api/backup":
+            # same gate as export - warn before archiving a compromised
+            # trail; VACUUM INTO gives a consistent snapshot.
+            try:
+                conn = _conn()
+                try:
+                    broken = not verify_audit_chain(conn).get("ok")
+                    from guardian_ai.paths import data_dir
+                    from datetime import datetime
+                    dst = (data_dir() / "backups" /
+                           f"audit-{datetime.now():%Y%m%d-%H%M%S}.db")
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    conn.execute("VACUUM INTO ?", (str(dst),))
+                finally:
+                    _release(conn)
+                self._send(200, json.dumps(
+                    {"path": str(dst), "chain_broken": broken}))
+            except Exception as e:
+                self._send(500, json.dumps({"error": str(e)}))
             return
         if self.path != "/api/request":
             self._send(404, json.dumps({"error": "not found"}))
