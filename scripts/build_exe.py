@@ -45,6 +45,19 @@ def main() -> int:
     sums.write_text(f"{digest}  {exe.name}\n", encoding="utf-8")
     print(f"[OK] {exe} ({exe.stat().st_size} bytes)")
     print(f"[OK] {sums}: {digest}")
+    # built != works - run 'version' on the artifact as the final gate
+    # so a corrupt exe doesn't get an OK (same self-check as deploy.py).
+    try:
+        r = subprocess.run([str(exe), "version"],
+                           capture_output=True, text=True, timeout=30)
+    except Exception as e:
+        print(f"[FAIL] exe self-check could not run: {e}")
+        return 1
+    if r.returncode != 0 or "ShieldAI" not in r.stdout:
+        print(f"[FAIL] exe self-check: rc={r.returncode} "
+              f"{r.stderr[:200]}")
+        return 1
+    print(f"[OK] exe self-check: {r.stdout.strip()}")
     return 0
 
 
