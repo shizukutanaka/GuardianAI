@@ -1,0 +1,4 @@
+Contact: https://github.com/shizukutanaka/GuardianAI/security/advisories/new
+Preferred-Languages: ja, en
+Canonical: https://github.com/shizukutanaka/GuardianAI/.well-known/security.txt
+Policy: https://github.com/shizukutanaka/GuardianAI/blob/main/SECURITY.md
