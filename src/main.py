@@ -664,7 +664,8 @@ def main() -> None:
                                  and "-" not in latest))
                     out = {"current": __version__, "latest": latest,
                            "update_available": newer,
-                           "url": rel.get("html_url")}
+                           "url": rel.get("html_url"),
+                           "notes": rel.get("body", "")}
                 except Exception as e:
                     # 404 = the repo has no releases yet - a normal
                     # state before the first tag, not a real failure.
@@ -678,6 +679,9 @@ def main() -> None:
                 elif out["update_available"]:
                     print(f"new version: {out['latest']} "
                           f"(current {__version__})\n{out['url']}")
+                    notes = (out.get("notes") or "").strip()
+                    if notes:
+                        print(f"\n{notes[:400]}")
                 else:
                     print(f"up to date ({__version__})")
                 continue

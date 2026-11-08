@@ -571,6 +571,8 @@ async function doUpdate(){
     toast(t('updateCheck'),
       r.update_available?tf('newVer',r)
         :r.error||tf('upToDate',r));
+    if(r.update_available&&r.notes)
+      toast(t('updateCheck'),r.notes.slice(0,200));
     if(r.update_available&&r.url)
       window.open(r.url,'_blank','noopener');
   }catch(e){toast(t('updateFailed'),e.message)}
@@ -911,7 +913,8 @@ class _Handler(BaseHTTPRequestHandler):
                     {"current": __version__, "latest": latest,
                      "update_available":
                          _v(latest) > _v(__version__),
-                     "url": rel.get("html_url")}))
+                     "url": rel.get("html_url"),
+                     "notes": str(rel.get("body", ""))[:400]}))
             except Exception as e:
                 self._send(502, json.dumps(
                     {"error": ("no releases published yet"
