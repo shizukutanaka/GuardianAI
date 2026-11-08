@@ -66,7 +66,15 @@ _CLI_STR["en"].update({
     "no_tasks": "no tasks",
     "no_forged": "no forged work-record rows",
     "showing": "(showing {shown} of {total})",
-    "goodbye": "Goodbye!"})
+    "goodbye": "Goodbye!",
+    "lbl_agent": "Agent:", "lbl_model": "Model:",
+    "lbl_complexity": "Complexity:",
+    "lbl_plan": "Plan:",
+    "lbl_unknowns": "Unknowns (verify locally, do not guess):",
+    "lbl_first": "First principles: {n} assumptions questioned, "
+                 "{m} fundamentals",
+    "lbl_audit": "[audit_logs #{id}] request processed and logged",
+    "no_answer": "(no answer)"})
 _CLI_STR["ja"].update({
     "warn_chain": "[警告] #{at} で監査チェーンが破損: {reason} - "
                   "ログが改竄された可能性があります",
@@ -83,7 +91,14 @@ _CLI_STR["ja"].update({
     "no_tasks": "作業なし",
     "no_forged": "偽造作業記録行はありません",
     "showing": "({shown} / {total} 件を表示)",
-    "goodbye": "終了します"})
+    "goodbye": "終了します",
+    "lbl_agent": "エージェント:", "lbl_model": "モデル:",
+    "lbl_complexity": "複雑度:",
+    "lbl_plan": "計画:",
+    "lbl_unknowns": "不明点 (ローカルで検証・推測しない):",
+    "lbl_first": "第一原理: {n} 個の仮定を疑問視・{m} 個の基礎要素",
+    "lbl_audit": "[audit_logs #{id}] リクエストを処理して記録",
+    "no_answer": "(回答なし)"})
 
 
 def _t(lang: str, key: str, **fmt) -> str:
@@ -223,21 +238,23 @@ def show_status(conn, executor) -> None:
 def show_result(result: dict, entry_id: int) -> None:
     thinking = result.get("thinking", {})
     execution = result.get("execution", {})
-    print(f"\nAgent:      {result['agent']}")
-    print(f"Model:      {result['model']}")
-    print(f"Complexity: {result['complexity']}")
-    print(f"First principles: {len(thinking.get('questioned', []))} assumptions questioned, "
-          f"{len(thinking.get('unknowns', []))} unknowns to verify")
-    print("Plan:")
+    lang = _lang_hint()
+    print(f"\n{_t(lang, 'lbl_agent'):13s}{result['agent']}")
+    print(f"{_t(lang, 'lbl_model'):13s}{result['model']}")
+    print(f"{_t(lang, 'lbl_complexity'):13s}{result['complexity']}")
+    print(_t(lang, "lbl_first",
+             n=len(thinking.get("questioned", [])),
+             m=len(thinking.get("unknowns", []))))
+    print(_t(lang, "lbl_plan"))
     for step in result["tasks"]:
         print(f"  {step['id']}. [{step['type']}] {step['desc']}")
     if execution:
-        print(f"\n{execution.get('answer', '(no answer)')}")
+        print(f"\n{execution.get('answer', _t(lang, 'no_answer'))}")
     if thinking.get("unknowns"):
-        print("Unknowns (verify locally, do not guess):")
+        print(_t(lang, "lbl_unknowns"))
         for u in thinking["unknowns"]:
             print(f"  - {u}")
-    print(f"\n[audit_logs #{entry_id}] request processed and logged\n")
+    print(f"\n{_t(lang, 'lbl_audit', id=entry_id)}\n")
 
 
 def main() -> None:
