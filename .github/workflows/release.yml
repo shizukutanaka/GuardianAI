@@ -32,11 +32,17 @@ jobs:
         run: |
           python scripts/build_exe.py
           python scripts/gen_sbom.py
+      - name: Installer (Windows only)
+        if: runner.os == 'Windows'
+        run: |
+          choco install innosetup -y --no-progress
+          iscc scripts/shieldai.iss
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/shieldai*
+            dist/ShieldAI-Setup-*.exe
             dist/SHA256SUMS.txt
             dist/sbom.cyclonedx.json
           generate_release_notes: true

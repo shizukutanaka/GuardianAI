@@ -339,6 +339,7 @@ async function refresh(){
       `<span class="dot ${s.ollama_up?'ok':'warn'}"><i></i>${
         s.ollama_up?(s.models[0]||'model'):'deterministic'}</span>`+
       `<span class="dot"><i></i>${s.audit_entries} entries</span>`+
+      `<span class="dot"><i></i>v${s.version}</span>`+
       ((s.triggers_missing||[]).length?
        `<span class="dot warn"><i></i>${s.triggers_missing.length} triggers missing</span>`:'');
   }catch(e){
@@ -567,7 +568,9 @@ def _status_payload(conn, executor):
                         "reason": lic.get("reason")}
     except Exception:
         license_info = {"valid": False, "reason": "check failed"}
+    from guardian_ai import __version__
     return {"audit_entries": count, "kms_ok": kms_ok,
+            "version": __version__,
             "license": license_info,
             "quick_check": conn.execute("PRAGMA quick_check").fetchone()[0],
             "chain": chain,
