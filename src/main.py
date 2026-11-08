@@ -298,6 +298,15 @@ def show_result(result: dict, entry_id: int) -> None:
 
 
 def main() -> None:
+    # a JA-first product shouldn't print mojibake - the Windows console
+    # defaults to cp932, so UTF-8 output (i18n strings, Japanese
+    # descriptions) comes out garbled. chcp 65001 switches the codepage.
+    if os.name == "nt":
+        try:
+            os.system("chcp 65001 > nul")
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
     router = Router()
     executor = Executor()
     conn = init_database()
