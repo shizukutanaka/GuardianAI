@@ -46,6 +46,7 @@ HELP = """Commands:
   version       show the product version
   update        check GitHub Releases for a newer version (the product's
                 only outbound call - user-invoked, read-only)
+  diag          paste-ready support info (version/OS/python/last crash)
   verify        re-run the HMAC audit-chain check explicitly
   ui            open the local web dashboard (http://127.0.0.1:8765)
   help          show this message
@@ -304,6 +305,33 @@ def main() -> None:
                 else:
                     print(f"ShieldAI {__version__}")
                 continue
+            if cmd == "diag" or cmd == "diag --json":
+                # paste-ready support info - 'please run diag' should be
+                # enough to reproduce most field problems.
+                import json as _json
+                import platform
+                from guardian_ai import __version__
+                from guardian_ai.paths import data_dir
+                crash = (data_dir() / "crash.log")
+                info = {"version": __version__,
+                        "os": f"{platform.system()} "
+                              f"{platform.release()}",
+                        "python": platform.python_version(),
+                        "arch": platform.machine(),
+                        "frozen": bool(getattr(sys, "frozen", False)),
+                        "data_dir": str(data_dir()),
+                        "last_crash": (crash.read_text(
+                            encoding="utf-8")[-2000:]
+                            if crash.exists() else None)}
+                if cmd.endswith("--json"):
+                    print(_json.dumps(info, ensure_ascii=False))
+                else:
+                    for k, v in info.items():
+                        if k == "last_crash" and v:
+                            print(f"last_crash:\n{v}")
+                        elif k != "last_crash":
+                            print(f"{k}: {v}")
+                continue
             if cmd == "update" or cmd == "update --json":
                 # the product's ONLY outbound call: user-invoked, read-
                 # only, sends nothing. Auto-update is deliberately NOT
@@ -534,4 +562,20 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        # an unhandled crash must not drop a bare traceback on a
+        # non-technical user - record it where support can find it.
+        import traceback
+        try:
+            from guardian_ai.paths import data_dir
+            crash = data_dir() / "crash.log"
+            crash.write_text(traceback.format_exc(),
+                             encoding="utf-8")
+            print(f"\nShieldAI stopped unexpectedly - details were "
+                  f"written to {crash}\nReport it with `diag` output.",
+                  file=sys.stderr)
+        except Exception:
+            traceback.print_exc()
+        sys.exit(1)

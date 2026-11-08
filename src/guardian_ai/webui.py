@@ -211,6 +211,8 @@ td{padding:8px 10px;border-top:1px solid var(--border);
   max-width:90vw;z-index:10}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast .cause{color:var(--dim);font-size:12px;margin-top:2px}
+.btn:focus-visible,input:focus-visible,.tab:focus-visible{
+  outline:2px solid var(--acc);outline-offset:2px}
 @media(max-width:560px){
   .req-row{flex-direction:column}
   .health{flex-wrap:wrap}
