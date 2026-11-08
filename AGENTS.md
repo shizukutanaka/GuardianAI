@@ -16,7 +16,8 @@ Ollama synthesis (labelled "未検証") -> redact -> HMAC audit chain.
 - Legal/community: `LICENSE` (MIT), `CODE_OF_CONDUCT.md`,
   `SECURITY.md` + `.well-known/security.txt` (RFC 9116),
   `.github/dependabot.yml` (weekly pip dep scan),
-  `.github/PULL_REQUEST_TEMPLATE.md` (honesty check).
+  `.github/PULL_REQUEST_TEMPLATE.md` (honesty check),
+  `.github/CODEOWNERS` (explicit review ownership).
 - Windows console: `chcp 65001` + UTF-8 reconfigure at startup so
   the JA i18n strings don't render as mojibake on cp932.
 - Version: `__version__` in `src/guardian_ai/__init__.py`.
