@@ -40,7 +40,13 @@ The authoritative list is `shieldai help` / `--help` - DO NOT hardcode
 it here (this list went stale twice when features landed). Notes:
 - `--lang ja|en` localizes banner/help/warnings (SHIELDAI_LANG env,
   '--lang', config.json, or OS locale in that order - `config lang xx`
-  persists it); `--json` on every command
+  persists it); `shieldai ui` without an arg opens the dashboard in
+  the persisted locale; `--json` on every command
+- `config` persists user prefs to data_dir/config.json - `lang <ja|en>`
+  and `no_network <on|off>` (env SHIELDAI_NO_NETWORK is the other source)
+- the Ollama host is deliberately hardcoded to localhost - making it
+  configurable would break the '100% offline' claim (LLM calls would
+  leave the machine)
 - `ui` writes data_dir/ui_url.txt - a second launch opens the live
   dashboard instead of crashing on EADDRINUSE
 - doctor's checks live in guardian_ai/compliance.py::doctor_checks
