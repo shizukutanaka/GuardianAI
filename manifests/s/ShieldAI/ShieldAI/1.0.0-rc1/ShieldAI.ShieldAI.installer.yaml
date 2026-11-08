@@ -1,0 +1,11 @@
+PackageIdentifier: ShieldAI.ShieldAI
+PackageVersion: 1.0.0-rc1
+InstallerType: inno
+Scope: machine
+UpgradeBehavior: install
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/shizukutanaka/GuardianAI/releases/download/v1.0.0-rc1/ShieldAI-Setup-1.0.0.exe
+    InstallerSha256: 0811f57a1ab1702d307b684dbfa68032585631edfc87e027812dd0f3186422ac
+ManifestType: installer
+ManifestVersion: 1.9.0

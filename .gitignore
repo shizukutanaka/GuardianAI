@@ -37,3 +37,4 @@ src/test_reports/
 *.license
 .vendor/
 src/test_files/
+!manifests/**/*.yaml

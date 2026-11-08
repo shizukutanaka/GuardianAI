@@ -1,0 +1,12 @@
+PackageIdentifier: ShieldAI.ShieldAI
+PackageVersion: 1.0.0-rc1
+PackageLocale: ja-JP
+Publisher: shizukutanaka
+PublisherUrl: https://github.com/shizukutanaka/GuardianAI
+PackageName: ShieldAI
+PackageUrl: https://github.com/shizukutanaka/GuardianAI
+License: MIT
+LicenseUrl: https://github.com/shizukutanaka/GuardianAI/blob/main/LICENSE
+ShortDescription: ローカル専用・オープンソースの AI コントロールプレーン - リクエストを分類して第一原理で計画し、決定論的に実行し、すべてを改竄耐性のある監査チェーンで記録します。
+ManifestType: locale
+ManifestVersion: 1.9.0

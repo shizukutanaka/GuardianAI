@@ -1,0 +1,14 @@
+PackageIdentifier: ShieldAI.ShieldAI
+PackageVersion: 1.0.0-rc1
+PackageLocale: en-US
+Publisher: shizukutanaka
+PublisherUrl: https://github.com/shizukutanaka/GuardianAI
+PackageName: ShieldAI
+PackageUrl: https://github.com/shizukutanaka/GuardianAI
+License: MIT
+LicenseUrl: https://github.com/shizukutanaka/GuardianAI/blob/main/LICENSE
+ShortDescription: Local-only, open-source AI control plane - classify
+  a request, plan first-principles, execute deterministically, audit
+  everything with a tamper-evident chain.
+ManifestType: defaultLocale
+ManifestVersion: 1.9.0
