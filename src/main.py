@@ -12,23 +12,42 @@ from guardian_ai.db import (init_database, audit_log, export_audit,
 from guardian_ai.executor import Executor
 from guardian_ai.router import Router
 
-BANNER = """
+# i18n: the CLI mirrors the web UI - banner/help live in a JA/EN dict,
+# language resolves SHIELDAI_LANG -> --lang xx -> OS locale -> 'en'.
+_CLI_STR = {
+    "en": {"banner": """
 ==================================================
 SHIELDAI - LOCAL AI CONTROL PLANE
 ==================================================
 Type a request, or 'help' / 'quit'.
 Examples:
+  assess risks in the annual report   -> accounting
+  legal risks in the contract         -> legal
+  analyze the server outage           -> it
+  code review                         -> developer
+  general administrative tasks        -> general
+
+Tip: paste log/contract text or a local file path into the request.
+==================================================
+"""},
+    "ja": {"banner": """
+==================================================
+SHIELDAI - ローカル AI コントロールプレーン
+==================================================
+リクエストを入力、または 'help' / 'quit'。
+例:
   決算書のリスク評価      -> accounting
   契約書の法律リスク      -> legal
   サーバー障害分析        -> it
   コードレビュー          -> developer
   一般事務処理            -> general
 
-Tip: paste log/contract text or a local file path into the request.
+ヒント: ログや契約書テキスト、ローカルファイルパスをそのまま貼れます。
 ==================================================
-"""
+"""},
+}
 
-HELP = """Commands:
+_CLI_STR["en"]["help"] = """Commands:
   <request>     classify -> plan -> execute (100% local) -> audit
   history [N]   show the N most recent audit entries (default 10)
   tasks         list the work record (task_queue + tasks, latest 20)
@@ -57,6 +76,48 @@ HELP = """Commands:
   help          show this message
   quit          exit
 """
+_CLI_STR["ja"]["help"] = """コマンド:
+  <リクエスト>  分類 -> 計画 -> 決定論的実行 (100% ローカル) -> 監査
+  history [N]   直近 N 件の監査エントリを表示 (既定 10)
+  tasks         作業記録を一覧 (task_queue + tasks・最新 20)
+  status        監査の整合性とキュー統計を表示
+  status --json 機械可読ステータス (audit_integrity の JSON)
+  verify --json 機械可読チェーン検証 (ok/broken/forged の JSON)
+  forged [--json] 偽造作業記録行を一覧 (無効/未署名シグネチャ)
+  history --json [N] 機械可読監査履歴 (最新 N 件の JSON)
+  backup --json 機械可読バックアップパス ({path} の JSON)
+  decrypt --json FILE 機械可読復号+検証 ({ok,entries_ok})
+  export        全監査エントリ+作業記録を暗号化 .enc に書き出す
+  backup        DB 全体を backups/ にスナップショット (一貫 VACUUM INTO)
+  decrypt FILE  ローカル KMS 鍵で .enc エクスポートを復号
+  license [FILE] ライセンス状態表示 / ライセンスファイル検証
+  version       製品バージョンを表示
+  update        GitHub Releases の新版を確認 (製品唯一の外向き呼び出し・
+                ユーザー起動・read-only)
+  diag          サポート用診断情報 (version/OS/python/最終クラッシュ)
+  doctor        環境自己診断 - 自分のマシンは動くか?
+                (crypto / data_dir / db / chain tip / ollama / license)
+  report [--json] プリフィル済み GitHub issue を開く (opt-in・自動送信なし)
+                / issue 本文を JSON で出力
+  verify        HMAC 監査チェーン検証を明示的に再実行
+  ui [ja|en]    指定ロケールでローカル Web ダッシュボードを開く
+                (http://127.0.0.1:8765)
+  help          このメッセージを表示
+  quit          終了
+"""
+
+
+def _cli_lang(argv) -> str:
+    """SHIELDAI_LANG env -> '--lang xx' arg -> OS locale -> 'en'."""
+    lang = os.environ.get("SHIELDAI_LANG", "")
+    if "--lang" in argv:
+        i = argv.index("--lang")
+        if i + 1 < len(argv):
+            lang = argv[i + 1]
+    if not lang:
+        import locale
+        lang = (locale.getlocale()[0] or "")[:2]
+    return lang if lang in _CLI_STR else "en"
 
 
 def show_history(conn, limit: int = 10) -> None:
@@ -133,7 +194,14 @@ def main() -> None:
     # also works but is ugly). No argv -> interactive REPL as before.
     # Exception: a frozen exe with no args is the PRODUCT - a customer
     # double-clicking it expects the dashboard, not a REPL prompt.
-    one_shot = " ".join(sys.argv[1:]).strip()
+    argv = sys.argv[1:]
+    lang = _cli_lang(argv)
+    # '--lang xx' is a global flag, not part of the command - strip the
+    # pair so 'shieldai --lang ja status' runs 'status'.
+    if "--lang" in argv:
+        i = argv.index("--lang")
+        argv = argv[:i] + argv[i + 2:]
+    one_shot = " ".join(argv).strip()
     if not one_shot and getattr(sys, "frozen", False):
         one_shot = "ui"
     chain = verify_audit_chain(conn)
@@ -158,7 +226,7 @@ def main() -> None:
             return
 
     if not one_shot:
-        print(BANNER)
+        print(_CLI_STR[lang]["banner"])
     fed = iter([one_shot]) if one_shot else None
     try:
         while True:
@@ -181,7 +249,7 @@ def main() -> None:
             if cmd in ("quit", "exit", "q"):
                 break
             if cmd == "help":
-                print(HELP)
+                print(_CLI_STR[lang]["help"])
                 continue
             if cmd.startswith("history --json") or cmd.startswith("history "):
                 # 'history --json [N]' gives the same entries in a

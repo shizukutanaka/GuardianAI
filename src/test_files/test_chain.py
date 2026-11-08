@@ -1,6 +1,6 @@
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-  # nosec B608 - template contains literal SQL for trigger tests, no interpolation
+
 def test():
     import os, tempfile
     from guardian_ai.db import init_database, audit_log, verify_audit_chain
