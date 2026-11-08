@@ -5,6 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ff69b4)](https://github.com/sponsors/shizukutanaka)
 
+![ShieldAI dashboard](docs/screenshot.png)
+
 Free, local-first, donation-supported. If ShieldAI is useful to you:
 [sponsor it on GitHub](https://github.com/sponsors/shizukutanaka).
 
