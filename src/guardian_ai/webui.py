@@ -254,6 +254,7 @@ td{padding:8px 10px;border-top:1px solid var(--border);
       <button class="btn ghost" onclick="doDecrypt()" data-i18n="actDecrypt">Decrypt</button>
       <button class="btn ghost" onclick="doUpdate()" data-i18n="actUpdate">Check updates</button>
       <button class="btn ghost" onclick="doDoctor()" data-i18n="actDoctor">Doctor</button>
+      <button class="btn ghost" onclick="doReport()" data-i18n="actReport">Report issue</button>
     </div>
     <div class="stages" id="stages" aria-live="polite"></div>
     <div class="result" id="result" aria-live="polite">
@@ -325,7 +326,8 @@ const STR={
      stg_verification:'検証',stg_synthesis:'合成',stg_audit:'監査',
      actDoctor:'環境診断',doctorOk:'全チェック通過',
      doctorFail:'{n} 件のチェックが失敗',
-     doctorFailed:'診断に失敗しました'},
+     doctorFailed:'診断に失敗しました',
+     actReport:'問題を報告'},
  en:{what:'What should we process?',ph:'e.g. check the log: server failure ERROR 10.0.0.1',
      run:'Run',running:'Running…',
      hint:'Enter to send · classify → plan → deterministic execute → audit (100% local)',
@@ -369,7 +371,8 @@ const STR={
      stg_audit:'audit',
      actDoctor:'Doctor',doctorOk:'all checks passed',
      doctorFail:'{n} check(s) failed',
-     doctorFailed:'doctor failed'}};
+     doctorFailed:'doctor failed',
+     actReport:'Report issue'}};
 const _Q=new URLSearchParams(location.search);
 const _LANG=_Q.get('lang')||sessionStorage.getItem('sl')||
   (navigator.language||'').slice(0,2);
@@ -571,6 +574,12 @@ async function doDoctor(){
         :tf('doctorFail',{n:bad.length})+' - '+
          bad.map(c=>`${c.name}: ${c.detail}`).join('; '));
   }catch(e){toast(t('doctorFailed'),e.message)}
+}
+function doReport(){
+  // parity with the CLI `report` - opt-in, user-invoked: open the
+  // issue form, nothing is auto-sent (the user fills and submits).
+  window.open('https://github.com/shizukutanaka/GuardianAI/issues/new',
+              '_blank','noopener');
 }
 async function doExport(){
   try{
