@@ -15,6 +15,7 @@ UX contract (first principles):
     status is computed, never decorative.
 """
 import json
+import os
 import queue
 import secrets
 import threading
@@ -859,6 +860,12 @@ class _Handler(BaseHTTPRequestHandler):
             # same check as the CLI 'update' command - the product's
             # ONLY outbound call: user-invoked (button), read-only,
             # sends nothing. No auto-update without signature checks.
+            # SHIELDAI_NO_NETWORK hard-cuts it for air-gapped installs.
+            if os.environ.get("SHIELDAI_NO_NETWORK"):
+                self._send(403, json.dumps(
+                    {"error": "outbound calls disabled "
+                              "(SHIELDAI_NO_NETWORK)"}))
+                return
             try:
                 import urllib.request
                 from guardian_ai import __version__

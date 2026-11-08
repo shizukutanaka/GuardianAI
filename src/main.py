@@ -486,7 +486,15 @@ def main() -> None:
                 # auto-send - gather diag, open a pre-filled GitHub issue
                 # in the browser (or emit the body as JSON for headless),
                 # the USER reviews and submits.
+                # SHIELDAI_NO_NETWORK closes this too.
                 import json as _json
+                if os.environ.get("SHIELDAI_NO_NETWORK"):
+                    print(_json.dumps({"error": "outbound calls disabled "
+                                               "(SHIELDAI_NO_NETWORK)"})
+                          if cmd.endswith("--json")
+                          else "outbound calls disabled "
+                               "(SHIELDAI_NO_NETWORK)")
+                    continue
                 import platform
                 import urllib.parse
                 import webbrowser
@@ -523,6 +531,14 @@ def main() -> None:
                 # only, sends nothing. Auto-update is deliberately NOT
                 # built - without signature verification it would be a
                 # downgrade/spoofing channel (fail-closed by design).
+                # SHIELDAI_NO_NETWORK hard-cuts it for air-gapped sites.
+                import json as _json
+                if os.environ.get("SHIELDAI_NO_NETWORK"):
+                    msg = ("outbound calls disabled "
+                           "(SHIELDAI_NO_NETWORK)")
+                    print(_json.dumps({"error": msg})
+                          if cmd.endswith("--json") else msg)
+                    continue
                 import json as _json
                 import urllib.request
                 from guardian_ai import __version__
