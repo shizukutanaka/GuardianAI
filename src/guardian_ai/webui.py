@@ -230,7 +230,7 @@ td{padding:8px 10px;border-top:1px solid var(--border);
     <option value="en">English</option>
   </select>
   <div class="health" id="health" role="status" aria-live="polite">
-    <span class="dot"><i></i>checking&hellip;</span>
+    <span class="dot"><i></i><span data-i18n="checking">checking…</span></span>
   </div>
 </header>
 
@@ -249,10 +249,10 @@ td{padding:8px 10px;border-top:1px solid var(--border);
       Enter で送信 &middot; 分類→計画→決定論的実行→監査 (100% ローカル)
     </div>
     <div class="actions">
-      <button class="btn ghost" onclick="doVerify()">Verify chain</button>
-      <button class="btn ghost" onclick="doExport()">Export audit</button>
-      <button class="btn ghost" onclick="doDecrypt()">Decrypt</button>
-      <button class="btn ghost" onclick="doUpdate()">Check updates</button>
+      <button class="btn ghost" onclick="doVerify()" data-i18n="actVerify">Verify chain</button>
+      <button class="btn ghost" onclick="doExport()" data-i18n="actExport">Export audit</button>
+      <button class="btn ghost" onclick="doDecrypt()" data-i18n="actDecrypt">Decrypt</button>
+      <button class="btn ghost" onclick="doUpdate()" data-i18n="actUpdate">Check updates</button>
     </div>
     <div class="stages" id="stages" aria-live="polite"></div>
     <div class="result" id="result" aria-live="polite">
@@ -265,12 +265,12 @@ td{padding:8px 10px;border-top:1px solid var(--border);
   <section aria-label="Activity">
     <div class="tabs" role="tablist">
       <button class="tab on" role="tab" aria-selected="true"
-        onclick="showTab('audit',this)">Audit log</button>
+        onclick="showTab('audit',this)" data-i18n="tabAudit">Audit log</button>
       <button class="tab" role="tab" aria-selected="false"
-        onclick="showTab('tasks',this)">Work record</button>
+        onclick="showTab('tasks',this)" data-i18n="tabTasks">Work record</button>
     </div>
-    <table id="audit" role="tabpanel" aria-label="Audit log"></table>
-    <table id="tasks" role="tabpanel" aria-label="Work record" style="display:none"></table>
+    <table id="audit" role="tabpanel" aria-label="Audit log" data-i18n-aria="tabAudit"></table>
+    <table id="tasks" role="tabpanel" aria-label="Work record" style="display:none" data-i18n-aria="tabTasks"></table>
   </section>
 </main>
 </div>
@@ -289,7 +289,39 @@ const STR={
      cancelledWhy:'破損した監査チェーンへの書き込みを拒否',
      failed:'実行に失敗しました',
      failedWhy:'再実行するか status で健全性を確認してください',
-     checking:'checking…'},
+     checking:'確認中…',
+     tabAudit:'監査ログ',tabTasks:'作業記録',
+     actVerify:'チェーン検証',actExport:'監査エクスポート',
+     actDecrypt:'復号',actUpdate:'更新確認',
+     tipOk:'先端一致',tipBroken:'先端破損',forged:'件 偽造',
+     keyOk:'鍵 ok',keyMissing:'鍵なし',
+     licensed:'ライセンス',community:'コミュニティ',
+     deterministic:'決定論',entries:'件',
+     triggersMissing:'件 トリガー欠落',offline:'オフライン',
+     thAgent:'エージェント',thReq:'リクエスト',thMs:'ms',
+     thTime:'時刻',thStatus:'状態',thDesc:'説明',
+     noEntries:'まだエントリがありません',
+     noTasks:'まだ作業がありません',
+     confirmBroken:'監査チェーンが #{n} で破損: {reason}\n\n改竄の可能性があります。続行しますか?',
+     noAnswer:'(回答なし)',
+     llmNote:'LLM 推論 ({model}) - モデル生成・未検証',
+     chainOk:'チェーン正常 - {n} 件を検証 (HMAC + chain_state)',
+     chainBroken:'チェーン破損{at}',
+     verifyFailed:'検証に失敗しました',
+     updateCheck:'更新チェック',
+     newVer:'新版 {latest} (現在 {current})',
+     upToDate:'最新です ({current})',
+     updateFailed:'更新チェックに失敗しました',
+     exported:'監査をエクスポートしました',
+     exportBroken:'警告: 監査チェーンが破損 - このエクスポートは侵害されたデータを含みます',
+     exportFailed:'エクスポートに失敗しました',
+     decPath:'復号するファイルのパス (.enc):',
+     decNonJson:'復号しました (JSON ではありません)',
+     decOk:'検証済み: {n} 件が署名済み先端に到達',
+     decInvalid:'無効: {reason}',
+     decFailed:'復号に失敗しました',
+     stg_ingestion:'取込',stg_extraction:'抽出',
+     stg_verification:'検証',stg_synthesis:'合成',stg_audit:'監査'},
  en:{what:'What should we process?',ph:'e.g. check the log: server failure ERROR 10.0.0.1',
      run:'Run',running:'Running…',
      hint:'Enter to send · classify → plan → deterministic execute → audit (100% local)',
@@ -297,7 +329,40 @@ const STR={
      cancelledWhy:'Refused to write to a broken audit chain',
      failed:'Run failed',
      failedWhy:'Retry, or check health with status',
-     checking:'checking…'}};
+     checking:'checking…',
+     tabAudit:'Audit log',tabTasks:'Work record',
+     actVerify:'Verify chain',actExport:'Export audit',
+     actDecrypt:'Decrypt',actUpdate:'Check updates',
+     tipOk:'tip ok',tipBroken:'tip broken',forged:'forged',
+     keyOk:'key ok',keyMissing:'key missing',
+     licensed:'licensed',community:'community',
+     deterministic:'deterministic',entries:'entries',
+     triggersMissing:'triggers missing',offline:'offline',
+     thAgent:'agent',thReq:'request',thMs:'ms',
+     thTime:'time',thStatus:'status',thDesc:'description',
+     noEntries:'no entries yet',
+     noTasks:'no tasks yet',
+     confirmBroken:'Audit chain is broken at #{n}: {reason}\n\nThe trail may be tampered. Continue anyway?',
+     noAnswer:'(no answer)',
+     llmNote:'LLM inference ({model}) - model-generated, unverified',
+     chainOk:'chain ok - {n} entries verified (HMAC + chain_state)',
+     chainBroken:'chain BROKEN{at}',
+     verifyFailed:'verify failed',
+     updateCheck:'update check',
+     newVer:'new version {latest} (current {current})',
+     upToDate:'up to date ({current})',
+     updateFailed:'update check failed',
+     exported:'audit exported',
+     exportBroken:'WARNING: audit chain is broken - this export captures compromised data',
+     exportFailed:'export failed',
+     decPath:'decrypt file path (.enc):',
+     decNonJson:'decrypted (not JSON)',
+     decOk:'verified: {n} entries reach signed head',
+     decInvalid:'INVALID: {reason}',
+     decFailed:'decrypt failed',
+     stg_ingestion:'ingestion',stg_extraction:'extraction',
+     stg_verification:'verification',stg_synthesis:'synthesis',
+     stg_audit:'audit'}};
 const _Q=new URLSearchParams(location.search);
 const _LANG=_Q.get('lang')||sessionStorage.getItem('sl')||
   (navigator.language||'').slice(0,2);
@@ -305,6 +370,7 @@ const LANG=STR[_LANG]?_LANG:'en';
 sessionStorage.setItem('sl',LANG);
 document.documentElement.lang=LANG;
 const t=k=>(STR[LANG]||STR.en)[k]||k;
+const tf=(k,o)=>t(k).replace(/\{(\w+)\}/g,(_,x)=>o?.[x]??x);
 function setLang(l){
   sessionStorage.setItem('sl',l);
   const u=new URL(location.href);u.searchParams.set('lang',l);
@@ -315,7 +381,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     e=>e.textContent=t(e.dataset.i18n));
   document.querySelectorAll('[data-i18n-ph]').forEach(
     e=>e.placeholder=t(e.dataset.i18nPh));
-  $('run').textContent=t('run');});
+  document.querySelectorAll('[data-i18n-aria]').forEach(
+    e=>e.setAttribute('aria-label',t(e.dataset.i18nAria)));
+  $('run').textContent=t('run');
+  $('health').innerHTML=`<span class="dot"><i></i>${t('checking')}</span>`;});
 const _T=_Q.get('t')||sessionStorage.getItem('st')||'';
 sessionStorage.setItem('st',_T);
 const H=o=>({...(o||{}),headers:{...((o&&o.headers)||{}),'X-Token':_T}});
@@ -340,34 +409,36 @@ async function refresh(){
       // the ambient check only verifies the tip (head/count match) -
       // 'chain ok' would overclaim full verification (verify runs it).
       `<span class="dot ${chain.ok?'ok':'bad'}"><i></i>${
-        chain.ok?'tip ok':'tip broken'}</span>`+
+        chain.ok?t('tipOk'):t('tipBroken')}</span>`+
       (chain.forged_tasks?`<span class="dot bad"><i></i>${
-        chain.forged_tasks} forged</span>`:'')+
+        chain.forged_tasks} ${t('forged')}</span>`:'')+
       `<span class="dot ${s.kms_ok===false?'bad':'ok'}"><i></i>${
-        s.kms_ok===false?'key missing':'key ok'}</span>`+
+        s.kms_ok===false?t('keyMissing'):t('keyOk')}</span>`+
       `<span class="dot ${(s.license||{}).valid?'ok':''}"><i></i>${
-        (s.license||{}).valid?'licensed':'community'}</span>`+
+        (s.license||{}).valid?t('licensed'):t('community')}</span>`+
       `<span class="dot ${s.ollama_up?'ok':'warn'}"><i></i>${
-        s.ollama_up?(s.models[0]||'model'):'deterministic'}</span>`+
-      `<span class="dot"><i></i>${s.audit_entries} entries</span>`+
+        s.ollama_up?(s.models[0]||'model'):t('deterministic')}</span>`+
+      `<span class="dot"><i></i>${s.audit_entries} ${t('entries')}</span>`+
       `<span class="dot"><i></i>v${s.version}</span>`+
       ((s.triggers_missing||[]).length?
-       `<span class="dot warn"><i></i>${s.triggers_missing.length} triggers missing</span>`:'');
+       `<span class="dot warn"><i></i>${
+         s.triggers_missing.length} ${t('triggersMissing')}</span>`:'');
   }catch(e){
-    $('health').innerHTML='<span class="dot bad"><i></i>offline</span>';
+    $('health').innerHTML=
+      `<span class="dot bad"><i></i>${t('offline')}</span>`;
   }
   loadTables();
 }
 /* ---------- tables ---------- */
 async function loadTables(){
   const h=await J('/api/history?n=15');
-  $('audit').innerHTML='<tr><th scope="col">#</th><th scope="col">agent</th><th scope="col">request</th><th scope="col">ms</th><th scope="col">time</th></tr>'+
+  $('audit').innerHTML=`<tr><th scope="col">#</th><th scope="col">${t('thAgent')}</th><th scope="col">${t('thReq')}</th><th scope="col">${t('thMs')}</th><th scope="col">${t('thTime')}</th></tr>`+
     (h.length?h.map(r=>`<tr><td class="mono">${r.id}</td><td>${esc(r.agent)}</td>
      <td class="dim">${esc((r.request||'').slice(0,48))}</td>
      <td class="mono">${r.latency_ms??'-'}</td>
      <td class="dim mono">${esc((r.timestamp||'').slice(5,19))}</td></tr>`).join('')
-     :'<tr><td colspan="5" class="empty">no entries yet</td></tr>');
-  const t=await J('/api/tasks');
+     :`<tr><td colspan="5" class="empty">${t('noEntries')}</td></tr>`);
+  const tk=await J('/api/tasks');
   const sc={done:'ok',blocked:'bad',failed:'bad',skipped:'warn',pending:'warn'};
   // parity with the CLI 'forged' command - the UI needs to see WHICH
   // rows are fabricated, not just 'tip broken' (was /api/forged dead code).
@@ -376,12 +447,12 @@ async function loadTables(){
     'style="color:var(--bad)">'+fg.map(r=>
       `[${esc(r.table)}] #${r.id} ${esc(r.agent)} `+
       `(${esc(r.reason||'')})`).join('<br>')+'</td></tr>':'';
-  $('tasks').innerHTML='<tr><th scope="col">agent</th><th scope="col">status</th><th scope="col">description</th></tr>'+
+  $('tasks').innerHTML=`<tr><th scope="col">${t('thAgent')}</th><th scope="col">${t('thStatus')}</th><th scope="col">${t('thDesc')}</th></tr>`+
     forgedRows+
-    (t.length?t.map(r=>`<tr><td>${esc(r.agent)}</td>
+    (tk.length?tk.map(r=>`<tr><td>${esc(r.agent)}</td>
      <td>${badge(r.status,sc[r.status]||'warn')}</td>
      <td class="dim">${esc(r.description||'')}</td></tr>`).join('')
-     :'<tr><td colspan="3" class="empty">no tasks yet</td></tr>');
+     :`<tr><td colspan="3" class="empty">${t('noTasks')}</td></tr>`);
 }
 function showTab(id,el){
   document.querySelectorAll('.tab').forEach(t=>{
@@ -393,11 +464,11 @@ function showTab(id,el){
 /* ---------- pipeline run: every state visible ---------- */
 const PIPE=['ingestion','extraction','verification','synthesis','audit'];
 function paintStages(done=[]){
-  $('stages').innerHTML=PIPE.map(t=>{
-    const s=done.find(x=>(x.step||x.type)===t);
+  $('stages').innerHTML=PIPE.map(st=>{
+    const s=done.find(x=>(x.step||x.type)===st);
     const cls=s?(s.status==='ok'||s.status==='done'?'done':
       s.status==='blocked'?'blocked':'skip'):'run';
-    return `<div class="stage ${cls}">${t}</div>`;
+    return `<div class="stage ${cls}">${t('stg_'+st)}</div>`;
   }).join('');
 }
 let busy=false;
@@ -415,8 +486,8 @@ async function submit(){
       body:JSON.stringify(body)})).then(r=>r.json());
     if(r.error==='chain_broken'){
       // same explicit-ack gate as the CLI - never write silently
-      if(confirm(`Audit chain is broken at #${r.broken_at}: ${r.reason}\n\n`+
-                 `The trail may be tampered. Continue anyway?`)){
+      if(confirm(tf('confirmBroken',
+                    {n:r.broken_at,reason:r.reason}))){
         r=await fetch('/api/request',H({method:'POST',
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify({text,ack_broken:true})})).then(r=>r.json());
@@ -437,11 +508,11 @@ async function submit(){
       `<span class="dim" style="font-size:12px">`+
       `model: ${esc(r.model)} · ${esc(r.complexity)} · `+
       `${((Date.now()-t0)/1000).toFixed(1)}s · audit #${r.entry_id}</span>`;
-    $('result-body').textContent=r.answer||'(no answer)';
+    $('result-body').textContent=r.answer||t('noAnswer');
     const llm=$('llm-note');
     if(r.llm_model){
       llm.style.display='block';
-      llm.textContent=`LLM inference (${r.llm_model}) - model-generated, unverified`;
+      llm.textContent=tf('llmNote',{model:r.llm_model});
     }else llm.style.display='none';
     $('req').value='';
     refresh();
@@ -458,20 +529,21 @@ async function doVerify(){
     const v=await J('/api/verify');
     // forged tasks / missing chain_state have broken_at=null - '#null'
     // would be a wrong display, so the reason alone carries those.
-    toast(v.ok?`chain ok - ${v.entries} entries verified (HMAC + chain_state)`
-             :`chain BROKEN${v.broken_at!=null?' at #'+v.broken_at:''}`,
+    toast(v.ok?tf('chainOk',{n:v.entries})
+             :tf('chainBroken',
+                 {at:v.broken_at!=null?' at #'+v.broken_at:''}),
           v.ok?'':v.reason||'');
-  }catch(e){toast('verify failed',e.message)}
+  }catch(e){toast(t('verifyFailed'),e.message)}
 }
 async function doUpdate(){
   try{
     const r=await fetch('/api/update',H({method:'POST',
       headers:{'Content-Type':'application/json'},
       body:'{}'})).then(r=>r.json());
-    toast('update check',
-      r.update_available?`new version ${r.latest} (current ${r.current})`
-        :r.error||`up to date (${r.current})`);
-  }catch(e){toast('update check failed',e.message)}
+    toast(t('updateCheck'),
+      r.update_available?tf('newVer',r)
+        :r.error||tf('upToDate',r));
+  }catch(e){toast(t('updateFailed'),e.message)}
 }
 async function doExport(){
   try{
@@ -479,15 +551,14 @@ async function doExport(){
       headers:{'Content-Type':'application/json'},
       body:'{}'})).then(r=>r.json());
     window._lastExport=r.path;
-    toast('audit exported',
-      r.chain_broken?'WARNING: audit chain is broken - this export '
-                    'captures compromised data':r.path);
-  }catch(e){toast('export failed',e.message)}
+    toast(t('exported'),
+      r.chain_broken?t('exportBroken'):r.path);
+  }catch(e){toast(t('exportFailed'),e.message)}
 }
 async function doDecrypt(){
   // export already returned the path - offer it so the user is not
   // expected to memorise a filesystem path (export->decrypt flow).
-  const path=prompt('decrypt file path (.enc):',window._lastExport||'');
+  const path=prompt(t('decPath'),window._lastExport||'');
   if(!path)return;
   try{
     const r=await fetch('/api/decrypt',H({method:'POST',
@@ -499,12 +570,12 @@ async function doDecrypt(){
       $('result').classList.add('show');
       $('result-head').innerHTML=badge('DECRYPTED','acc');
       $('result-body').textContent=r.decrypted;
-      toast('decrypted (not JSON)',r.reason||'');
+      toast(t('decNonJson'),r.reason||'');
       return;
     }
-    toast(r.ok?`verified: ${r.entries} entries reach signed head`
-             :`INVALID: ${r.reason}`,r.anchor||'');
-  }catch(e){toast('decrypt failed',e.message)}
+    toast(r.ok?tf('decOk',{n:r.entries})
+             :tf('decInvalid',{reason:r.reason}),r.anchor||'');
+  }catch(e){toast(t('decFailed'),e.message)}
 }
 /* ---------- keys ---------- */
 $('req').addEventListener('keydown',e=>{if(e.key==='Enter')submit()});
