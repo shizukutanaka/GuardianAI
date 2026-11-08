@@ -44,6 +44,8 @@ HELP = """Commands:
   decrypt FILE  decrypt an .enc export with the local KMS key
   license [FILE] show license status / verify a license file
   version       show the product version
+  update        check GitHub Releases for a newer version (the product's
+                only outbound call - user-invoked, read-only)
   verify        re-run the HMAC audit-chain check explicitly
   ui            open the local web dashboard (http://127.0.0.1:8765)
   help          show this message
@@ -301,6 +303,51 @@ def main() -> None:
                     print(_json.dumps({"version": __version__}))
                 else:
                     print(f"ShieldAI {__version__}")
+                continue
+            if cmd == "update" or cmd == "update --json":
+                # the product's ONLY outbound call: user-invoked, read-
+                # only, sends nothing. Auto-update is deliberately NOT
+                # built - without signature verification it would be a
+                # downgrade/spoofing channel (fail-closed by design).
+                import json as _json
+                import urllib.request
+                from guardian_ai import __version__
+
+                def _v(s):
+                    s = str(s).lstrip("v").split("-")[0]
+                    return tuple(int(x) for x in s.split(".")
+                                 if x.isdigit())
+                try:
+                    req = urllib.request.Request(
+                        "https://api.github.com/repos/shizukutanaka/"
+                        "GuardianAI/releases/latest",
+                        headers={"User-Agent": "shieldai-update-check",
+                                 "Accept": "application/vnd.github+json"})
+                    rel = _json.loads(
+                        urllib.request.urlopen(req, timeout=10).read())
+                    latest = str(rel.get("tag_name", "")).lstrip("v")
+                    newer = (_v(latest) > _v(__version__)
+                             or (_v(latest) == _v(__version__)
+                                 and "-" in __version__
+                                 and "-" not in latest))
+                    out = {"current": __version__, "latest": latest,
+                           "update_available": newer,
+                           "url": rel.get("html_url")}
+                except Exception as e:
+                    # 404 = the repo has no releases yet - a normal
+                    # state before the first tag, not a real failure.
+                    msg = ("no releases published yet"
+                           if "404" in str(e) else str(e))
+                    out = {"current": __version__, "error": msg}
+                if cmd.endswith("--json"):
+                    print(_json.dumps(out, ensure_ascii=False))
+                elif out.get("error"):
+                    print(f"update check: {out['error']}")
+                elif out["update_available"]:
+                    print(f"new version: {out['latest']} "
+                          f"(current {__version__})\n{out['url']}")
+                else:
+                    print(f"up to date ({__version__})")
                 continue
             if cmd == "license" or cmd == "license --json" \
                     or cmd.startswith("license "):

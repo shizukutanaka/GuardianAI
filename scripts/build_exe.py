@@ -34,12 +34,15 @@ def main() -> int:
     ], cwd=str(ROOT))
     if rc:
         return rc
-    exe = DIST / "shieldai.exe"
+    # PyInstaller emits shieldai.exe on Windows, bare 'shieldai'
+    # elsewhere - the release matrix builds on all three.
+    exe = DIST / ("shieldai.exe" if sys.platform == "win32"
+                  else "shieldai")
     # publish the hash - an unsigned binary is verifiable if the digest
     # is delivered through a second channel (the GitHub release).
     digest = hashlib.sha256(exe.read_bytes()).hexdigest()
     sums = DIST / "SHA256SUMS.txt"
-    sums.write_text(f"{digest}  shieldai.exe\n", encoding="utf-8")
+    sums.write_text(f"{digest}  {exe.name}\n", encoding="utf-8")
     print(f"[OK] {exe} ({exe.stat().st_size} bytes)")
     print(f"[OK] {sums}: {digest}")
     return 0

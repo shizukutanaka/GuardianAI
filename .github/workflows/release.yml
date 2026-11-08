@@ -2,7 +2,8 @@
 # attaches them to a GitHub Release, so `git tag v1.0.0 && git push
 # --tags` is the whole release ceremony.
 #
-# Artifacts: shieldai.exe, SHA256SUMS.txt, sbom.cyclonedx.json.
+# Artifacts per OS: shieldai-<os> (+ shieldai.exe on Windows),
+# SHA256SUMS.txt, sbom.cyclonedx.json.
 # Unsigned binaries ship with their hash for manual verification -
 # code signing can be added later without changing the flow.
 name: release
@@ -12,7 +13,10 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -32,7 +36,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/shieldai.exe
+            dist/shieldai*
             dist/SHA256SUMS.txt
             dist/sbom.cyclonedx.json
           generate_release_notes: true
