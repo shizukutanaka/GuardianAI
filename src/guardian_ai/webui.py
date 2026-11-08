@@ -933,6 +933,12 @@ class _Handler(BaseHTTPRequestHandler):
                            f"audit-{datetime.now():%Y%m%d-%H%M%S}.db")
                     dst.parent.mkdir(parents=True, exist_ok=True)
                     conn.execute("VACUUM INTO ?", (str(dst),))
+                    # same rotation as the CLI - an unbounded backups
+                    # folder would repeat the audit-growth problem it
+                    # was meant to solve.
+                    snaps = sorted(dst.parent.glob("audit-*.db"))
+                    for old in snaps[:-10]:
+                        old.unlink()
                 finally:
                     _release(conn)
                 self._send(200, json.dumps(
