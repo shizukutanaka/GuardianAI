@@ -13,6 +13,12 @@ Ollama synthesis (labelled "未検証") -> redact -> HMAC audit chain.
   13/13 generated tests PASS (includes test_main.py - imports the CLI
   entry point so a broken main.py can't ship silently).
 - Funding model: MIT + GitHub Sponsors only (`.github/FUNDING.yml`).
+- Legal/community: `LICENSE` (MIT), `CODE_OF_CONDUCT.md`,
+  `SECURITY.md` + `.well-known/security.txt` (RFC 9116),
+  `.github/dependabot.yml` (weekly pip dep scan),
+  `.github/PULL_REQUEST_TEMPLATE.md` (honesty check).
+- Windows console: `chcp 65001` + UTF-8 reconfigure at startup so
+  the JA i18n strings don't render as mojibake on cp932.
 - Version: `__version__` in `src/guardian_ai/__init__.py`.
 
 ## Run / build
