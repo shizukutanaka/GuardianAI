@@ -1,0 +1,38 @@
+# Release pipeline - tag push builds the distributable artifacts and
+# attaches them to a GitHub Release, so `git tag v1.0.0 && git push
+# --tags` is the whole release ceremony.
+#
+# Artifacts: shieldai.exe, SHA256SUMS.txt, sbom.cyclonedx.json.
+# Unsigned binaries ship with their hash for manual verification -
+# code signing can be added later without changing the flow.
+name: release
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+      - name: Tests gate the release
+        run: python src/test_auto.py
+      - name: Build exe + sums + sbom
+        run: |
+          python scripts/build_exe.py
+          python scripts/gen_sbom.py
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/shieldai.exe
+            dist/SHA256SUMS.txt
+            dist/sbom.cyclonedx.json
+          generate_release_notes: true

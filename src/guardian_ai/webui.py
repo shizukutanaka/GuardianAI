@@ -228,14 +228,16 @@ td{padding:8px 10px;border-top:1px solid var(--border);
 
 <main>
   <section class="hero" aria-label="Request">
-    <label for="req">何を処理しますか?</label>
+    <label for="req" data-i18n="what">何を処理しますか?</label>
     <div class="req-row">
       <input id="req" type="text" autocomplete="off" autofocus
+        data-i18n-ph="ph"
         placeholder="例: サーバー障害 ERROR 10.0.0.1 ログを確認して"
         aria-describedby="hint">
       <button class="btn" id="run" onclick="submit()">実行</button>
     </div>
-    <div id="hint" class="dim" style="font-size:12px;margin-top:8px">
+    <div id="hint" class="dim" style="font-size:12px;margin-top:8px"
+      data-i18n="hint">
       Enter で送信 &middot; 分類→計画→決定論的実行→監査 (100% ローカル)
     </div>
     <div class="actions">
@@ -267,7 +269,40 @@ td{padding:8px 10px;border-top:1px solid var(--border);
 
 <script>
 const $=id=>document.getElementById(id);
-const _T=new URLSearchParams(location.search).get('t')||sessionStorage.getItem('st')||'';
+// i18n: ?lang= -> sessionStorage -> navigator.language. A global product
+// can't hardcode one language - strings live in a dict so new locales
+// are added as data, not code.
+const STR={
+ ja:{what:'何を処理しますか?',ph:'例: サーバー障害 ERROR 10.0.0.1 ログを確認して',
+     run:'実行',running:'実行中…',
+     hint:'Enter で送信 · 分類→計画→決定論的実行→監査 (100% ローカル)',
+     cancelled:'中止しました',
+     cancelledWhy:'破損した監査チェーンへの書き込みを拒否',
+     failed:'実行に失敗しました',
+     failedWhy:'再実行するか status で健全性を確認してください',
+     checking:'checking…'},
+ en:{what:'What should we process?',ph:'e.g. check the log: server failure ERROR 10.0.0.1',
+     run:'Run',running:'Running…',
+     hint:'Enter to send · classify → plan → deterministic execute → audit (100% local)',
+     cancelled:'Cancelled',
+     cancelledWhy:'Refused to write to a broken audit chain',
+     failed:'Run failed',
+     failedWhy:'Retry, or check health with status',
+     checking:'checking…'}};
+const _Q=new URLSearchParams(location.search);
+const _LANG=_Q.get('lang')||sessionStorage.getItem('sl')||
+  (navigator.language||'').slice(0,2);
+const LANG=STR[_LANG]?_LANG:'en';
+sessionStorage.setItem('sl',LANG);
+document.documentElement.lang=LANG;
+const t=k=>(STR[LANG]||STR.en)[k]||k;
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('[data-i18n]').forEach(
+    e=>e.textContent=t(e.dataset.i18n));
+  document.querySelectorAll('[data-i18n-ph]').forEach(
+    e=>e.placeholder=t(e.dataset.i18nPh));
+  $('run').textContent=t('run');});
+const _T=_Q.get('t')||sessionStorage.getItem('st')||'';
 sessionStorage.setItem('st',_T);
 const H=o=>({...(o||{}),headers:{...((o&&o.headers)||{}),'X-Token':_T}});
 const J=u=>fetch(u,H()).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
@@ -354,7 +389,7 @@ let busy=false;
 async function submit(){
   const text=$('req').value.trim();
   if(!text||busy)return;
-  busy=true;$('run').disabled=true;$('run').textContent='実行中…';
+  busy=true;$('run').disabled=true;$('run').textContent=t('running');
   $('result').classList.remove('show');
   paintStages();
   const t0=Date.now();
@@ -372,8 +407,8 @@ async function submit(){
           body:JSON.stringify({text,ack_broken:true})})).then(r=>r.json());
       }else{
         paintStages([]);
-        toast('中止しました','破損した監査チェーンへの書き込みを拒否');
-        busy=false;$('run').disabled=false;$('run').textContent='実行';
+        toast(t('cancelled'),t('cancelledWhy'));
+        busy=false;$('run').disabled=false;$('run').textContent=t('run');
         return;
       }
     }
@@ -397,10 +432,9 @@ async function submit(){
     refresh();
   }catch(e){
     paintStages(PIPE.map(t=>({step:t,status:'blocked'})));
-    toast('実行に失敗しました',
-      `${e.message} - 再試行するか status で原因を確認してください`);
+    toast(t('failed'),`${e.message} - ${t('failedWhy')}`);
   }finally{
-    busy=false;$('run').disabled=false;$('run').textContent='実行';
+    busy=false;$('run').disabled=false;$('run').textContent=t('run');
   }
 }
 /* ---------- secondary actions ---------- */
