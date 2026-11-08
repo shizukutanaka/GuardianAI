@@ -174,13 +174,22 @@ def doctor_checks(conn, executor) -> List[Dict[str, Any]]:
              if lic["valid"] else "community")
     except Exception as e:
         _app("license", False, str(e))
-    # SHIELDAI_NO_NETWORK blocks the only outbound call - a doctor
-    # report should surface it so 'update doesn't work' is explained,
-    # not a mystery.
+    # SHIELDAI_NO_NETWORK env var or config.json's no_network=on both
+    # block the only outbound call - a doctor report should surface
+    # either so 'update doesn't work' is explained, not a mystery.
+    _nn = os.environ.get("SHIELDAI_NO_NETWORK")
+    if not _nn:
+        try:
+            import json as _json
+            from guardian_ai.paths import data_dir
+            _nn = (_json.loads(
+                (data_dir() / "config.json").read_text("utf-8"))
+                .get("no_network") in ("on", "1", True))
+        except Exception:
+            _nn = False
     _app("network", True,
-         "air-gapped (SHIELDAI_NO_NETWORK)"
-         if os.environ.get("SHIELDAI_NO_NETWORK")
-         else "local-only (update check is user-invoked)")
+         "air-gapped (no_network)"
+         if _nn else "local-only (update check is user-invoked)")
     return checks
 
 

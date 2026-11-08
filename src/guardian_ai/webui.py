@@ -877,10 +877,19 @@ class _Handler(BaseHTTPRequestHandler):
             # ONLY outbound call: user-invoked (button), read-only,
             # sends nothing. No auto-update without signature checks.
             # SHIELDAI_NO_NETWORK hard-cuts it for air-gapped installs.
-            if os.environ.get("SHIELDAI_NO_NETWORK"):
+            _nn = os.environ.get("SHIELDAI_NO_NETWORK")
+            if not _nn:
+                try:
+                    from guardian_ai.paths import data_dir
+                    _nn = (json.loads(
+                        (data_dir() / "config.json").read_text(
+                            "utf-8")).get("no_network")
+                           in ("on", "1", True))
+                except Exception:
+                    _nn = False
+            if _nn:
                 self._send(403, json.dumps(
-                    {"error": "outbound calls disabled "
-                              "(SHIELDAI_NO_NETWORK)"}))
+                    {"error": "outbound calls disabled (no_network)"}))
                 return
             try:
                 import urllib.request

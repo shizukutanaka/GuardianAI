@@ -211,6 +211,20 @@ def _write_config(**kv) -> None:
         _json.dumps(cfg, ensure_ascii=False, indent=2), "utf-8")
 
 
+def _is_no_network() -> bool:
+    """env var OR persisted config - either can air-gap the install."""
+    if os.environ.get("SHIELDAI_NO_NETWORK"):
+        return True
+    try:
+        import json as _json
+        from guardian_ai.paths import data_dir
+        cfg = _json.loads(
+            (data_dir() / "config.json").read_text("utf-8"))
+        return cfg.get("no_network") in ("on", "1", True)
+    except Exception:
+        return False
+
+
 def show_history(conn, limit: int = 10) -> None:
     # show a snippet of the result too - a request without its outcome
     # is half an audit view (the user can't see what the agent did).
@@ -535,12 +549,11 @@ def main() -> None:
                 # the USER reviews and submits.
                 # SHIELDAI_NO_NETWORK closes this too.
                 import json as _json
-                if os.environ.get("SHIELDAI_NO_NETWORK"):
+                if _is_no_network():
                     print(_json.dumps({"error": "outbound calls disabled "
-                                               "(SHIELDAI_NO_NETWORK)"})
+                                               "(no_network)"})
                           if cmd.endswith("--json")
-                          else "outbound calls disabled "
-                               "(SHIELDAI_NO_NETWORK)")
+                          else "outbound calls disabled (no_network)")
                     continue
                 import platform
                 import urllib.parse
@@ -594,11 +607,13 @@ def main() -> None:
                                           indent=2)
                               if cfg else "(no config set)")
                     continue
-                if len(parts) == 3 and parts[1] in ("lang",):
+                if len(parts) == 3 and parts[1] in (
+                        "lang", "no_network"):
                     _write_config(**{parts[1]: parts[2]})
                     print(f"saved {parts[1]}={parts[2]} to config.json")
                 else:
-                    print("usage: config lang <ja|en>")
+                    print("usage: config lang <ja|en> | "
+                          "config no_network <on|off>")
                 continue
             if cmd == "update" or cmd == "update --json":
                 # the product's ONLY outbound call: user-invoked, read-
@@ -607,9 +622,8 @@ def main() -> None:
                 # downgrade/spoofing channel (fail-closed by design).
                 # SHIELDAI_NO_NETWORK hard-cuts it for air-gapped sites.
                 import json as _json
-                if os.environ.get("SHIELDAI_NO_NETWORK"):
-                    msg = ("outbound calls disabled "
-                           "(SHIELDAI_NO_NETWORK)")
+                if _is_no_network():
+                    msg = "outbound calls disabled (no_network)"
                     print(_json.dumps({"error": msg})
                           if cmd.endswith("--json") else msg)
                     continue
