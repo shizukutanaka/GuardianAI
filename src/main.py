@@ -350,6 +350,11 @@ def main() -> None:
             if not user_input:
                 continue
             cmd = user_input.lower()
+            # file-path args must keep their case - on Linux/macOS the
+            # FS is case-sensitive, so 'verify D:\Foo.DB' lowercased to
+            # 'd:\foo.db' would report 'file not found' for a real file.
+            raw_arg = (user_input.split(None, 1)[1]
+                       if " " in user_input else "")
             # conventional flags shouldn't be analyzed as requests -
             # '--version' / '--help' map to their commands, not the router.
             cmd = {"--version": "version", "-v": "version",
@@ -682,7 +687,7 @@ def main() -> None:
                 from guardian_ai.licensing import (verify_license,
                                                   license_status)
                 json_out = "--json" in cmd
-                files = [p for p in cmd.split()[1:]
+                files = [p for p in raw_arg.split()
                          if p != "--json"]
                 st = (verify_license(files[0]) if files
                       else license_status())
@@ -704,19 +709,24 @@ def main() -> None:
                 # 'verify <file.db>' checks a backup's chain against the
                 # live KMS chain_state - a backup that doesn't match is
                 # tampered-or-outdated, not trustworthy.
-                parts = cmd.split()
-                if len(parts) > 1:
+                if raw_arg:
+                    import os as _os
                     import sqlite3 as _sqlite3
-                    try:
-                        fconn = _sqlite3.connect(parts[1])
-                    except Exception as e:
-                        print(f"cannot open {parts[1]}: {e}")
+                    if not _os.path.exists(raw_arg):
+                        print(f"file not found: {raw_arg}")
                         continue
+                    # mode=ro so a missing path errors instead of
+                    # creating an empty file that then fails on
+                    # 'no such table: audit_logs'.
                     try:
+                        fconn = _sqlite3.connect(
+                            f"file:{raw_arg}?mode=ro", uri=True)
                         v = verify_audit_chain(fconn)
-                    finally:
+                        v["file"] = raw_arg
                         fconn.close()
-                    v["file"] = parts[1]
+                    except Exception as e:
+                        print(f"cannot verify {raw_arg}: {e}")
+                        continue
                 else:
                     v = verify_audit_chain(conn)
                 if v["ok"]:
