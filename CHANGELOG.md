@@ -34,3 +34,14 @@ All notable changes to ShieldAI. Format follows
 - Funding: MIT + GitHub Sponsors only (`.github/FUNDING.yml`)
 - The product's only outbound call: `update`/`/api/update` and
   `report` opening a GitHub issue - both user-invoked, read-only
+
+### Post-tag fixes (verified by the first real release run)
+- requirements.txt had `python>=3.11` as a package line - release jobs
+  failed on all 3 OSes
+- release publish needed `contents: write` on GITHUB_TOKEN
+- per-OS artifact names (ubuntu/macos uploaded `dist/shieldai` and
+  silently overwrote each other); .iss paths were script-relative
+- bandit: nosec belongs on the flagged line and inside real comments
+  (a `# nosec` inside a triple-quoted string is string content)
+- complete UI i18n + CLI i18n (banner/help/warnings), --lang flag,
+  doctor + /api/doctor, ui_url.txt second-launch, arrow-key tabs

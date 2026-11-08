@@ -36,12 +36,14 @@ Ollama synthesis (labelled "未検証") -> redact -> HMAC audit chain.
   lives in gitignored `.vendor/` (never commit it).
 
 ## CLI commands
-history [N|--json N], tasks [--json], status [--json], verify [--json],
-forged [--json], export [--json], backup [--json], decrypt [--json] FILE,
-license [FILE|--json], version [--json], update [--json], diag [--json],
-report [--json], doctor [--json], ui [ja|en], help, quit.
-(doctor's checks live in guardian_ai/compliance.py::doctor_checks and
-are shared with the UI's GET /api/doctor.)
+The authoritative list is `shieldai help` / `--help` - DO NOT hardcode
+it here (this list went stale twice when features landed). Notes:
+- `--lang ja|en` localizes banner/help/warnings (SHIELDAI_LANG env or
+  OS locale also works); `--json` on every command
+- `ui` writes data_dir/ui_url.txt - a second launch opens the live
+  dashboard instead of crashing on EADDRINUSE
+- doctor's checks live in guardian_ai/compliance.py::doctor_checks
+  (shared with GET /api/doctor)
 
 ## Environment quirks
 - SHIELDAI_DATA_DIR=D:\shieldai-data (setx'd) holds DB + KMS keys +
