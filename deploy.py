@@ -43,6 +43,15 @@ def build() -> bool:
     shutil.copy2(target, simple)
     print(f"[OK] built {target} ({target.stat().st_size} bytes)")
     print(f"     run: {sys.executable} {simple}")
+    # built != works - a corrupt pyz still gets an OK without this
+    # self-check, so run 'version' on the artifact as the final gate.
+    import subprocess
+    r = subprocess.run([sys.executable, str(simple), "version"],
+                       capture_output=True, text=True, timeout=30)
+    if r.returncode != 0 or __version__ not in r.stdout:
+        print(f"[FAIL] built pyz failed self-check: {r.stderr[:200]}")
+        return False
+    print(f"[OK] pyz self-check: {r.stdout.strip()}")
     return True
 
 
