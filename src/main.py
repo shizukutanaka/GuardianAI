@@ -420,7 +420,7 @@ def main() -> None:
                         headers={"User-Agent": "shieldai-update-check",
                                  "Accept": "application/vnd.github+json"})
                     rel = _json.loads(
-                        urllib.request.urlopen(req, timeout=10).read())
+                        urllib.request.urlopen(req, timeout=10).read())  # nosec B310 - hardcoded https GitHub API URL
                     latest = str(rel.get("tag_name", "")).lstrip("v")
                     newer = (_v(latest) > _v(__version__)
                              or (_v(latest) == _v(__version__)

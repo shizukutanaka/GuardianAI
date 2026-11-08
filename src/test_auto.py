@@ -171,7 +171,7 @@ def test():
         assert out['status'] == 'done' and out['llm_model'] is None
 """ + FOOTER,
 
-    "chain": HEADER + """
+    "chain": HEADER + """  # nosec B608 - template contains literal SQL for trigger tests, no interpolation
 def test():
     import os, tempfile
     from guardian_ai.db import init_database, audit_log, verify_audit_chain
@@ -257,7 +257,7 @@ def test():
     base = f'http://127.0.0.1:{port}'
     def get(p, tok='test-tok'):
         req = urllib.request.Request(base + p, headers={'X-Token': tok})
-        return json.loads(urllib.request.urlopen(req, timeout=10).read())
+        return json.loads(urllib.request.urlopen(req, timeout=10).read())  # nosec B310 - localhost test server
     # the session token gates every /api/ endpoint - without it a local
     # process could read or pollute the audit trail
     try:
@@ -279,7 +279,7 @@ def test():
         data=json.dumps({'text':'server ERROR check'}).encode(),
         headers={'Content-Type':'application/json',
                  'X-Token':'test-tok'}, method='POST')
-    r = json.loads(urllib.request.urlopen(req, timeout=30).read())
+    r = json.loads(urllib.request.urlopen(req, timeout=30).read())  # nosec B310 - localhost test server
     assert r['agent'] == 'it' and 'entry_id' in r
     srv.shutdown()
 """ + FOOTER,

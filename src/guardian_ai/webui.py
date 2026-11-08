@@ -868,7 +868,7 @@ class _Handler(BaseHTTPRequestHandler):
                     headers={"User-Agent": "shieldai-update-check",
                              "Accept": "application/vnd.github+json"})
                 rel = json.loads(
-                    urllib.request.urlopen(req, timeout=10).read())
+                    urllib.request.urlopen(req, timeout=10).read())  # nosec B310 - hardcoded https GitHub API URL
                 latest = str(rel.get("tag_name", "")).lstrip("v")
 
                 def _v(s):

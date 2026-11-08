@@ -21,6 +21,11 @@ class OllamaClient:
     """Minimal local Ollama HTTP client (stdlib only)."""
 
     def __init__(self, host: str = DEFAULT_HOST, timeout: float = 3.0):
+        # only http(s) is meaningful for the daemon - rejecting file:/
+        # and other schemes keeps a misconfigured host from doing
+        # something unrelated (bandit B310's actual concern).
+        if not host.startswith(("http://", "https://")):
+            raise ValueError(f"unsupported ollama host scheme: {host!r}")
         self.host = host.rstrip("/")
         self.timeout = timeout
         self._available: Optional[bool] = None
@@ -28,8 +33,7 @@ class OllamaClient:
     def _get(self, path: str, timeout: float) -> Optional[Dict[str, Any]]:
         try:
             req = urllib.request.Request(self.host + path)
-            # nosec B310 - host is localhost/operator-configured local daemon
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 - host is an operator-configured local daemon (localhost by default)
                 return json.loads(resp.read().decode())
         except (OSError, urllib.error.URLError, json.JSONDecodeError):
             return None
@@ -40,8 +44,7 @@ class OllamaClient:
             req = urllib.request.Request(
                 self.host + path, data=body,
                 headers={"Content-Type": "application/json"})
-            # nosec B310 - host is localhost/operator-configured local daemon
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 - operator-configured local daemon
                 return json.loads(resp.read().decode())
         except (OSError, urllib.error.URLError, json.JSONDecodeError):
             return None
