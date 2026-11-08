@@ -402,10 +402,17 @@ def main() -> None:
                 continue
             if cmd == "ui" or cmd.startswith("ui "):
                 # 'ui en' / 'ui ja' opens the dashboard in that locale -
-                # same ?lang= mechanism the header selector writes.
-                lang = (cmd.split()[1] if cmd.startswith("ui ") else "")
+                # same ?lang= mechanism the header selector writes. A
+                # persisted `config lang xx` supplies the default so the
+                # CLI's language preference reaches the dashboard too.
+                arg = (cmd.split()[1] if cmd.startswith("ui ") else "")
+                if arg in ("ja", "en"):
+                    ui_lang = arg
+                else:
+                    ui_lang = _lang_hint() if _lang_hint() in (
+                        "ja", "en") else None
                 from guardian_ai.webui import serve
-                serve(lang=lang if lang in ("ja", "en") else None)
+                serve(lang=ui_lang)
                 # blocks until Ctrl+C; returns here on exit
                 continue
             if cmd == "tasks" or cmd == "tasks --json":
