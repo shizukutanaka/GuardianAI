@@ -229,6 +229,15 @@ def test():
     assert warn['status'] == 'warn'
 """ + FOOTER,
 
+    "main": HEADER + """
+def test():
+    # importing main.py must not explode - a syntax error in the CLI
+    # entry point would break every command but the generated tests
+    # (which import guardian_ai.*) would never notice.
+    import importlib, main
+    importlib.reload(main)
+""" + FOOTER,
+
     "webui": HEADER + """
 import json, tempfile, threading, urllib.request, os
 def test():

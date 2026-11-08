@@ -170,6 +170,11 @@ def main() -> None:
             if not user_input:
                 continue
             cmd = user_input.lower()
+            # conventional flags shouldn't be analyzed as requests -
+            # '--version' / '--help' map to their commands, not the router.
+            cmd = {"--version": "version", "-v": "version",
+                   "--help": "help", "-h": "help",
+                   "-V": "version"}.get(cmd, cmd)
             if cmd in ("quit", "exit", "q"):
                 break
             if cmd == "help":
@@ -346,6 +351,9 @@ def main() -> None:
                 from guardian_ai import __version__
                 from guardian_ai.paths import data_dir
                 crash = data_dir() / "crash.log"
+                crash_txt = (crash.read_text(
+                    encoding="utf-8")[-1500:]
+                    if crash.exists() else "(none)")
                 body = (f"## diag\n"
                         f"- version: {__version__}\n"
                         f"- os: {platform.system()} "
@@ -354,9 +362,7 @@ def main() -> None:
                         f"- arch: {platform.machine()}\n"
                         f"- frozen: {bool(getattr(sys,'frozen',False))}\n"
                         f"- data_dir: {data_dir()}\n\n"
-                        f"## last crash\n```\n"
-                        f"{(crash.read_text(encoding='utf-8')[-1500:]"
-                        f" if crash.exists() else '(none)')}\n```\n\n"
+                        f"## last crash\n```\n{crash_txt}\n```\n\n"
                         f"## what happened?\n")
                 url = ("https://github.com/shizukutanaka/GuardianAI/"
                        f"issues/new?title=crash%3A+{__version__}&body="
