@@ -140,6 +140,7 @@ _CLI_STR["en"]["help"] = """Commands:
   verify        re-run the HMAC audit-chain check explicitly
   ui [ja|en]    open the local web dashboard in that locale
                 (http://127.0.0.1:8765)
+  config [lang <ja|en>] show/persist preferences (data_dir/config.json)
   help          show this message
   quit          exit
 """
@@ -175,16 +176,39 @@ _CLI_STR["ja"]["help"] = """コマンド:
 
 
 def _cli_lang(argv) -> str:
-    """SHIELDAI_LANG env -> '--lang xx' arg -> OS locale -> 'en'."""
+    """SHIELDAI_LANG env -> '--lang xx' -> config.json -> OS locale."""
     lang = os.environ.get("SHIELDAI_LANG", "")
     if "--lang" in argv:
         i = argv.index("--lang")
         if i + 1 < len(argv):
             lang = argv[i + 1]
     if not lang:
+        try:
+            import json as _json
+            from guardian_ai.paths import data_dir
+            cfg = _json.loads(
+                (data_dir() / "config.json").read_text("utf-8"))
+            lang = cfg.get("lang", "")
+        except Exception:
+            lang = ""
+    if not lang:
         import locale
         lang = (locale.getlocale()[0] or "")[:2]
     return lang if lang in _CLI_STR else "en"
+
+
+def _write_config(**kv) -> None:
+    """Persist user preferences to data_dir/config.json."""
+    import json as _json
+    from guardian_ai.paths import data_dir
+    try:
+        cfg = _json.loads(
+            (data_dir() / "config.json").read_text("utf-8"))
+    except Exception:
+        cfg = {}
+    cfg.update(kv)
+    (data_dir() / "config.json").write_text(
+        _json.dumps(cfg, ensure_ascii=False, indent=2), "utf-8")
 
 
 def show_history(conn, limit: int = 10) -> None:
@@ -548,6 +572,33 @@ def main() -> None:
                     webbrowser.open(url)
                     print(f"opened a pre-filled issue - review and "
                           f"submit ({url[:70]}...)")
+                continue
+            if cmd.startswith("config"):
+                # persist preferences so users don't repeat args each run:
+                # 'config lang ja' writes data_dir/config.json; _cli_lang
+                # picks it up after env/--lang, before OS locale.
+                import json as _json
+                parts = cmd.split()
+                if len(parts) == 1 or parts[1] == "--json":
+                    try:
+                        from guardian_ai.paths import data_dir
+                        cfg = _json.loads(
+                            (data_dir() / "config.json")
+                            .read_text("utf-8"))
+                    except Exception:
+                        cfg = {}
+                    if cmd.endswith("--json"):
+                        print(_json.dumps(cfg, ensure_ascii=False))
+                    else:
+                        print(_json.dumps(cfg, ensure_ascii=False,
+                                          indent=2)
+                              if cfg else "(no config set)")
+                    continue
+                if len(parts) == 3 and parts[1] in ("lang",):
+                    _write_config(**{parts[1]: parts[2]})
+                    print(f"saved {parts[1]}={parts[2]} to config.json")
+                else:
+                    print("usage: config lang <ja|en>")
                 continue
             if cmd == "update" or cmd == "update --json":
                 # the product's ONLY outbound call: user-invoked, read-
