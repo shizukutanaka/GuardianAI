@@ -468,6 +468,16 @@ function showTab(id,el){
   $('audit').style.display=id==='audit'?'':'none';
   $('tasks').style.display=id==='tasks'?'':'none';
 }
+// ARIA tablist keyboard pattern: arrow keys move between tabs, not
+// just Tab - without it screen-reader users can't switch panels.
+document.querySelectorAll('.tab').forEach(el=>{
+  el.addEventListener('keydown',e=>{
+    if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;
+    const tabs=[...document.querySelectorAll('.tab')];
+    const i=(tabs.indexOf(el)+(e.key==='ArrowRight'?1:-1)+tabs.length)
+      %tabs.length;
+    tabs[i].focus();tabs[i].click();});
+});
 /* ---------- pipeline run: every state visible ---------- */
 const PIPE=['ingestion','extraction','verification','synthesis','audit'];
 function paintStages(done=[]){

@@ -39,7 +39,9 @@ Ollama synthesis (labelled "未検証") -> redact -> HMAC audit chain.
 history [N|--json N], tasks [--json], status [--json], verify [--json],
 forged [--json], export [--json], backup [--json], decrypt [--json] FILE,
 license [FILE|--json], version [--json], update [--json], diag [--json],
-report [--json], ui, help, quit.
+report [--json], doctor [--json], ui [ja|en], help, quit.
+(doctor's checks live in guardian_ai/compliance.py::doctor_checks and
+are shared with the UI's GET /api/doctor.)
 
 ## Environment quirks
 - SHIELDAI_DATA_DIR=D:\shieldai-data (setx'd) holds DB + KMS keys +
