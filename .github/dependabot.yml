@@ -1,0 +1,15 @@
+# a security product that doesn't scan its own dependencies is
+# inconsistent with its own claims - cryptography is the only hard
+# dep and a CVE in it should get an alert+PR, not be silent.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "deps"
