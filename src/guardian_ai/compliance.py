@@ -122,4 +122,60 @@ def check_compliance(data: Any = None) -> Dict[str, Any]:
     return {"status": status, "checks": checks}
 
 
-__all__ = ["check_compliance", "scan_sensitive", "audit_integrity", "redact"]
+def doctor_checks(conn, executor) -> List[Dict[str, Any]]:
+    """Environment self-check shared by the CLI `doctor` command and the
+    Web UI /api/doctor endpoint. Each entry is the thing that most often
+    fails on a new machine. Optional dependencies (ollama, a license
+    file) report as valid states, not failures - the product still
+    works in deterministic/community mode."""
+    checks = []
+
+    def _app(name, ok, detail=""):
+        checks.append({"name": name, "ok": ok, "detail": detail})
+
+    try:
+        from cryptography.hazmat.primitives.ciphers import Cipher  # noqa
+        _app("cryptography", True)
+    except Exception as e:
+        _app("cryptography", False, str(e))
+    try:
+        from guardian_ai.paths import data_dir
+        d = data_dir()
+        t = d / ".wtest"
+        t.write_text("x", encoding="utf-8")
+        t.unlink()
+        _app("data_dir writable", True, str(d))
+    except Exception as e:
+        _app("data_dir writable", False, str(e))
+    try:
+        n = conn.execute("SELECT COUNT(*) FROM audit_logs").fetchone()[0]
+        _app("database", True, f"{n} entries")
+    except Exception as e:
+        _app("database", False, str(e))
+    try:
+        qc = audit_integrity()
+        _app("chain tip", bool(qc.get("ok")),
+             "ok" if qc.get("ok") else qc.get("reason", "broken"))
+    except Exception as e:
+        _app("chain tip", False, str(e))
+    try:
+        up = bool(getattr(
+            getattr(executor, "llm", None), "available",
+            lambda: False)())
+        _app("ollama", True,
+             "reachable" if up else "unreachable (deterministic mode)")
+    except Exception as e:
+        _app("ollama", False, str(e))
+    try:
+        from guardian_ai.licensing import license_status
+        lic = license_status()
+        _app("license", True,
+             ("licensed: " + lic["licensee"])
+             if lic["valid"] else "community")
+    except Exception as e:
+        _app("license", False, str(e))
+    return checks
+
+
+__all__ = ["check_compliance", "scan_sensitive", "audit_integrity",
+           "redact", "doctor_checks"]

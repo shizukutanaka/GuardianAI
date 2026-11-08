@@ -253,6 +253,7 @@ td{padding:8px 10px;border-top:1px solid var(--border);
       <button class="btn ghost" onclick="doExport()" data-i18n="actExport">Export audit</button>
       <button class="btn ghost" onclick="doDecrypt()" data-i18n="actDecrypt">Decrypt</button>
       <button class="btn ghost" onclick="doUpdate()" data-i18n="actUpdate">Check updates</button>
+      <button class="btn ghost" onclick="doDoctor()" data-i18n="actDoctor">Doctor</button>
     </div>
     <div class="stages" id="stages" aria-live="polite"></div>
     <div class="result" id="result" aria-live="polite">
@@ -321,7 +322,10 @@ const STR={
      decInvalid:'無効: {reason}',
      decFailed:'復号に失敗しました',
      stg_ingestion:'取込',stg_extraction:'抽出',
-     stg_verification:'検証',stg_synthesis:'合成',stg_audit:'監査'},
+     stg_verification:'検証',stg_synthesis:'合成',stg_audit:'監査',
+     actDoctor:'環境診断',doctorOk:'全チェック通過',
+     doctorFail:'{n} 件のチェックが失敗',
+     doctorFailed:'診断に失敗しました'},
  en:{what:'What should we process?',ph:'e.g. check the log: server failure ERROR 10.0.0.1',
      run:'Run',running:'Running…',
      hint:'Enter to send · classify → plan → deterministic execute → audit (100% local)',
@@ -362,7 +366,10 @@ const STR={
      decFailed:'decrypt failed',
      stg_ingestion:'ingestion',stg_extraction:'extraction',
      stg_verification:'verification',stg_synthesis:'synthesis',
-     stg_audit:'audit'}};
+     stg_audit:'audit',
+     actDoctor:'Doctor',doctorOk:'all checks passed',
+     doctorFail:'{n} check(s) failed',
+     doctorFailed:'doctor failed'}};
 const _Q=new URLSearchParams(location.search);
 const _LANG=_Q.get('lang')||sessionStorage.getItem('sl')||
   (navigator.language||'').slice(0,2);
@@ -544,6 +551,16 @@ async function doUpdate(){
       r.update_available?tf('newVer',r)
         :r.error||tf('upToDate',r));
   }catch(e){toast(t('updateFailed'),e.message)}
+}
+async function doDoctor(){
+  try{
+    const r=await J('/api/doctor');
+    const bad=(r.checks||[]).filter(c=>!c.ok);
+    toast(t('actDoctor'),
+      r.all_ok?t('doctorOk')
+        :tf('doctorFail',{n:bad.length})+' - '+
+         bad.map(c=>`${c.name}: ${c.detail}`).join('; '));
+  }catch(e){toast(t('doctorFailed'),e.message)}
 }
 async function doExport(){
   try{
@@ -757,6 +774,22 @@ class _Handler(BaseHTTPRequestHandler):
                                  "rows": _forged_rows(conn)}
             self._send(200, json.dumps(
                 _forged_cache.get("rows", []), ensure_ascii=False))
+        elif self.path == "/api/doctor":
+            # environment self-check - same shared logic as `doctor`;
+            # read-only so it belongs in GET, not POST.
+            try:
+                from guardian_ai.compliance import doctor_checks
+                conn = _conn()
+                try:
+                    checks = doctor_checks(conn, self.server.executor)
+                finally:
+                    _release(conn)
+                self._send(200, json.dumps(
+                    {"checks": checks,
+                     "all_ok": all(c["ok"] for c in checks)},
+                    ensure_ascii=False))
+            except Exception as e:
+                self._send(500, json.dumps({"error": str(e)}))
         else:
             self._send(404, json.dumps({"error": "not found"}))
 

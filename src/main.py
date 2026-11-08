@@ -348,69 +348,20 @@ def main() -> None:
                 continue
             if cmd == "doctor" or cmd == "doctor --json":
                 # environment self-check: 'diag' reports WHAT the env is,
-                # 'doctor' tells the user WHETHER it works. Each check is
-                # the thing that most often fails on a new machine.
+                # 'doctor' tells the user WHETHER it works. The logic is
+                # shared with the UI's /api/doctor endpoint.
                 import json as _json
-                checks = []
-                try:
-                    from cryptography.hazmat.primitives.ciphers \
-                        import Cipher  # noqa: F401
-                    checks.append(("cryptography", True, ""))
-                except Exception as e:
-                    checks.append(("cryptography", False, str(e)))
-                try:
-                    from guardian_ai.paths import data_dir
-                    d = data_dir()
-                    t = d / ".wtest"
-                    t.write_text("x", encoding="utf-8")
-                    t.unlink()
-                    checks.append(("data_dir writable", True, str(d)))
-                except Exception as e:
-                    checks.append(("data_dir writable", False, str(e)))
-                try:
-                    n = conn.execute(
-                        "SELECT COUNT(*) FROM audit_logs").fetchone()[0]
-                    checks.append(("database", True, f"{n} entries"))
-                except Exception as e:
-                    checks.append(("database", False, str(e)))
-                try:
-                    qc = audit_integrity()
-                    checks.append(("chain tip", bool(qc.get("ok")),
-                                   "ok" if qc.get("ok")
-                                   else qc.get("reason", "broken")))
-                except Exception as e:
-                    checks.append(("chain tip", False, str(e)))
-                try:
-                    up = bool(getattr(
-                        getattr(executor, "llm", None), "available",
-                        lambda: False)())
-                    # ollama is optional - unreachable means
-                    # deterministic mode, which is a working state.
-                    checks.append(("ollama", True,
-                                   "reachable" if up else
-                                   "unreachable (deterministic mode)"))
-                except Exception as e:
-                    checks.append(("ollama", False, str(e)))
-                try:
-                    from guardian_ai.licensing import license_status
-                    lic = license_status()
-                    # community is a valid state, not a failure - the
-                    # donation model means 'no license' still works.
-                    checks.append(("license", True,
-                                   ("licensed: " + lic["licensee"])
-                                   if lic["valid"] else "community"))
-                except Exception as e:
-                    checks.append(("license", False, str(e)))
+                from guardian_ai.compliance import doctor_checks
+                checks = doctor_checks(conn, executor)
                 if cmd.endswith("--json"):
                     print(_json.dumps(
-                        {"checks": [{"name": n, "ok": ok, "detail": dt}
-                                    for n, ok, dt in checks],
-                         "all_ok": all(ok for _, ok, _ in checks)},
+                        {"checks": checks,
+                         "all_ok": all(c["ok"] for c in checks)},
                         ensure_ascii=False))
                 else:
-                    for n, ok, dt in checks:
-                        print(f"{'OK ' if ok else 'FAIL'} {n}"
-                              f"{(' - ' + dt) if dt else ''}")
+                    for c in checks:
+                        print(f"{'OK ' if c['ok'] else 'FAIL'} {c['name']}"
+                              f"{(' - ' + c['detail']) if c['detail'] else ''}")
                 continue
             if cmd == "report" or cmd == "report --json":
                 # opt-in crash reporting for a local-only product: never
