@@ -74,8 +74,10 @@ venv/Scripts/python scripts/build_exe.py # -> dist/shieldai.exe + SHA256SUMS.txt
 
 # CLI commands inside main.py (also one-shot: `python src/main.py <command>`):
 #   history [N], tasks, status, verify, forged, export, backup,
-#   decrypt FILE, license [FILE], version, ui, help, quit
-#   most support --json for scripting
+#   decrypt FILE, license [FILE], version, update, diag, report,
+#   doctor, ui [ja|en], help, quit
+#   every command supports --json for scripting
+#   conventional flags work too: --version / -v / --help / -h
 
 # Check health
 python -c "import sqlite3; conn=sqlite3.connect('src/guardian_ai/shield_ai.db'); c=conn.cursor(); c.execute('SELECT COUNT(*) FROM audit_logs'); print('audit_logs:', c.fetchone()[0]); c.execute('PRAGMA integrity_check'); print('integrity:', c.fetchone()[0])"

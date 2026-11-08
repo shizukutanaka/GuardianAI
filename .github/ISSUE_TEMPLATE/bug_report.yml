@@ -1,0 +1,33 @@
+name: Bug report
+description: Report something that doesn't work - `shieldai diag` output is the fastest context
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Run `shieldai diag` and paste its output - it has everything
+        needed to reproduce most problems.
+        For crashes, `shieldai report` opens this form pre-filled.
+  - type: textarea
+    id: diag
+    attributes:
+      label: Diag output
+      description: Output of `shieldai diag` (version, OS, python, data_dir, last crash)
+      placeholder: paste `shieldai diag` output here
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, what happened instead
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Already tried
+      options:
+        - label: Ran `shieldai doctor` (environment self-check)
+        - label: Ran `shieldai verify` (audit chain check)
