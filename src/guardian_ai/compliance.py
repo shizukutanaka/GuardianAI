@@ -174,6 +174,13 @@ def doctor_checks(conn, executor) -> List[Dict[str, Any]]:
              if lic["valid"] else "community")
     except Exception as e:
         _app("license", False, str(e))
+    # SHIELDAI_NO_NETWORK blocks the only outbound call - a doctor
+    # report should surface it so 'update doesn't work' is explained,
+    # not a mystery.
+    _app("network", True,
+         "air-gapped (SHIELDAI_NO_NETWORK)"
+         if os.environ.get("SHIELDAI_NO_NETWORK")
+         else "local-only (update check is user-invoked)")
     return checks
 
 
