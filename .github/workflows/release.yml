@@ -43,12 +43,28 @@ jobs:
         run: |
           choco install innosetup -y --no-progress
           iscc scripts/shieldai.iss
+      - name: Name artifacts per-OS
+        # all three jobs built 'dist/shieldai*' - uploading the same
+        # filename to one release means last-writer-wins and a platform
+        # silently disappears (proven by the first real run: only one
+        # 'shieldai' asset existed). Rename before publish.
+        shell: bash
+        run: |
+          cd dist
+          case "$RUNNER_OS" in
+            Windows) mv shieldai.exe shieldai-windows.exe
+                     mv SHA256SUMS.txt SHA256SUMS-windows.txt ;;
+            macOS)   mv shieldai shieldai-macos
+                     mv SHA256SUMS.txt SHA256SUMS-macos.txt ;;
+            Linux)   mv shieldai shieldai-linux
+                     mv SHA256SUMS.txt SHA256SUMS-linux.txt ;;
+          esac
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/shieldai*
+            dist/shieldai-*
             dist/ShieldAI-Setup-*.exe
-            dist/SHA256SUMS.txt
+            dist/SHA256SUMS-*.txt
             dist/sbom.cyclonedx.json
           generate_release_notes: true

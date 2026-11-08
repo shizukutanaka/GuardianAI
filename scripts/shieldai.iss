@@ -15,7 +15,9 @@ AppVersion={#AppVer}
 AppPublisher=shizukutanaka
 DefaultDirName={autopf}\ShieldAI
 DefaultGroupName=ShieldAI
-OutputDir=dist
+; paths resolve relative to THIS script's directory - dist/ lives at
+; the repo root, one level up.
+OutputDir=..\dist
 OutputBaseFilename=ShieldAI-Setup-{#AppVer}
 Compression=lzma2
 SolidCompression=yes
@@ -24,8 +26,8 @@ ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\shieldai.exe
 
 [Files]
-Source: "dist\shieldai.exe"; DestDir: "{app}"
-Source: "dist\SHA256SUMS.txt"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "..\dist\shieldai.exe"; DestDir: "{app}"
+Source: "..\dist\SHA256SUMS.txt"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
 [Icons]
 Name: "{group}\ShieldAI"; Filename: "{app}\shieldai.exe"
