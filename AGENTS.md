@@ -48,6 +48,17 @@ it here (this list went stale twice when features landed). Notes:
 - the Ollama host is deliberately hardcoded to localhost - making it
   configurable would break the '100% offline' claim (LLM calls would
   leave the machine)
+- `pick_model` prefers a loaded model to avoid a load/swap stall - a
+  persisted 'preferred model' would override that heuristic and cause
+  stalls, so `config ollama_model` is deliberately NOT offered
+- `config data_dir` is deliberately NOT offered - the KMS keys and DB
+  already live in SHIELDAI_DATA_DIR; changing it would orphan them
+- `restore` is deliberately manual (file copy over the live DB) - a
+  command that overwrites the audit trail is too dangerous to make
+  one-line
+- the UI port is fixed at 8765 - ui_url.txt, the docs, and the
+  second-launch mechanism all reference it; making it configurable
+  would break those references
 - `ui` writes data_dir/ui_url.txt - a second launch opens the live
   dashboard instead of crashing on EADDRINUSE
 - doctor's checks live in guardian_ai/compliance.py::doctor_checks
