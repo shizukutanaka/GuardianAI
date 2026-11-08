@@ -47,8 +47,8 @@ HELP = """Commands:
   update        check GitHub Releases for a newer version (the product's
                 only outbound call - user-invoked, read-only)
   diag          paste-ready support info (version/OS/python/last crash)
-  report        open a pre-filled GitHub issue with diag+crash (opt-in,
-                never auto-sends)
+  report [--json] open a pre-filled GitHub issue with diag+crash (opt-in,
+                never auto-sends) / emit the issue body as JSON
   verify        re-run the HMAC audit-chain check explicitly
   ui            open the local web dashboard (http://127.0.0.1:8765)
   help          show this message
@@ -334,10 +334,11 @@ def main() -> None:
                         elif k != "last_crash":
                             print(f"{k}: {v}")
                 continue
-            if cmd == "report":
+            if cmd == "report" or cmd == "report --json":
                 # opt-in crash reporting for a local-only product: never
                 # auto-send - gather diag, open a pre-filled GitHub issue
-                # in the browser, the USER reviews and submits.
+                # in the browser (or emit the body as JSON for headless),
+                # the USER reviews and submits.
                 import json as _json
                 import platform
                 import urllib.parse
@@ -360,9 +361,14 @@ def main() -> None:
                 url = ("https://github.com/shizukutanaka/GuardianAI/"
                        f"issues/new?title=crash%3A+{__version__}&body="
                        + urllib.parse.quote(body))
-                webbrowser.open(url)
-                print(f"opened a pre-filled issue - review and submit "
-                      f"({url[:70]}...)")
+                if cmd.endswith("--json"):
+                    print(_json.dumps({"issue_body": body,
+                                       "issue_url": url},
+                                      ensure_ascii=False))
+                else:
+                    webbrowser.open(url)
+                    print(f"opened a pre-filled issue - review and "
+                          f"submit ({url[:70]}...)")
                 continue
             if cmd == "update" or cmd == "update --json":
                 # the product's ONLY outbound call: user-invoked, read-

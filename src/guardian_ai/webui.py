@@ -223,6 +223,12 @@ td{padding:8px 10px;border-top:1px solid var(--border);
 
 <header>
   <div class="logo">ShieldAI</div>
+  <select id="lang" aria-label="Language" onchange="setLang(this.value)"
+    style="background:var(--card);color:var(--text);border:1px solid
+      var(--border);border-radius:6px;padding:4px 8px;font-size:13px">
+    <option value="ja">日本語</option>
+    <option value="en">English</option>
+  </select>
   <div class="health" id="health" role="status" aria-live="polite">
     <span class="dot"><i></i>checking&hellip;</span>
   </div>
@@ -299,7 +305,12 @@ const LANG=STR[_LANG]?_LANG:'en';
 sessionStorage.setItem('sl',LANG);
 document.documentElement.lang=LANG;
 const t=k=>(STR[LANG]||STR.en)[k]||k;
+function setLang(l){
+  sessionStorage.setItem('sl',l);
+  const u=new URL(location.href);u.searchParams.set('lang',l);
+  location.href=u;}
 document.addEventListener('DOMContentLoaded',()=>{
+  const sel=document.getElementById('lang');if(sel)sel.value=LANG;
   document.querySelectorAll('[data-i18n]').forEach(
     e=>e.textContent=t(e.dataset.i18n));
   document.querySelectorAll('[data-i18n-ph]').forEach(
