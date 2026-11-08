@@ -38,8 +38,9 @@ Ollama synthesis (labelled "未検証") -> redact -> HMAC audit chain.
 ## CLI commands
 The authoritative list is `shieldai help` / `--help` - DO NOT hardcode
 it here (this list went stale twice when features landed). Notes:
-- `--lang ja|en` localizes banner/help/warnings (SHIELDAI_LANG env or
-  OS locale also works); `--json` on every command
+- `--lang ja|en` localizes banner/help/warnings (SHIELDAI_LANG env,
+  '--lang', config.json, or OS locale in that order - `config lang xx`
+  persists it); `--json` on every command
 - `ui` writes data_dir/ui_url.txt - a second launch opens the live
   dashboard instead of crashing on EADDRINUSE
 - doctor's checks live in guardian_ai/compliance.py::doctor_checks
@@ -47,7 +48,7 @@ it here (this list went stale twice when features landed). Notes:
 
 ## Environment quirks
 - SHIELDAI_DATA_DIR=D:\shieldai-data (setx'd) holds DB + KMS keys +
-  crash.log + shieldai.license + ui_url.txt.
+  crash.log + shieldai.license + ui_url.txt + config.json.
 - Ollama portable at D:\ollama; start with `start-ollama.cmd`.
 - GPU: RTX A2000 12GB; inference ~6s; deterministic mode works w/o GPU.
 - venv is a 32-bit Python - if cryptography's _rust DLL breaks,
