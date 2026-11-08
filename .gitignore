@@ -36,3 +36,4 @@ src/test_reports/
 *.enc
 *.license
 .vendor/
+src/test_files/
