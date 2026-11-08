@@ -263,8 +263,8 @@ td{padding:8px 10px;border-top:1px solid var(--border);
       <button class="tab" role="tab" aria-selected="false"
         onclick="showTab('tasks',this)">Work record</button>
     </div>
-    <table id="audit" aria-label="Audit log"></table>
-    <table id="tasks" aria-label="Work record" style="display:none"></table>
+    <table id="audit" role="tabpanel" aria-label="Audit log"></table>
+    <table id="tasks" role="tabpanel" aria-label="Work record" style="display:none"></table>
   </section>
 </main>
 </div>

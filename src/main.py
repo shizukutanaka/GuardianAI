@@ -47,6 +47,8 @@ HELP = """Commands:
   update        check GitHub Releases for a newer version (the product's
                 only outbound call - user-invoked, read-only)
   diag          paste-ready support info (version/OS/python/last crash)
+  report        open a pre-filled GitHub issue with diag+crash (opt-in,
+                never auto-sends)
   verify        re-run the HMAC audit-chain check explicitly
   ui            open the local web dashboard (http://127.0.0.1:8765)
   help          show this message
@@ -331,6 +333,36 @@ def main() -> None:
                             print(f"last_crash:\n{v}")
                         elif k != "last_crash":
                             print(f"{k}: {v}")
+                continue
+            if cmd == "report":
+                # opt-in crash reporting for a local-only product: never
+                # auto-send - gather diag, open a pre-filled GitHub issue
+                # in the browser, the USER reviews and submits.
+                import json as _json
+                import platform
+                import urllib.parse
+                import webbrowser
+                from guardian_ai import __version__
+                from guardian_ai.paths import data_dir
+                crash = data_dir() / "crash.log"
+                body = (f"## diag\n"
+                        f"- version: {__version__}\n"
+                        f"- os: {platform.system()} "
+                        f"{platform.release()}\n"
+                        f"- python: {platform.python_version()}\n"
+                        f"- arch: {platform.machine()}\n"
+                        f"- frozen: {bool(getattr(sys,'frozen',False))}\n"
+                        f"- data_dir: {data_dir()}\n\n"
+                        f"## last crash\n```\n"
+                        f"{(crash.read_text(encoding='utf-8')[-1500:]"
+                        f" if crash.exists() else '(none)')}\n```\n\n"
+                        f"## what happened?\n")
+                url = ("https://github.com/shizukutanaka/GuardianAI/"
+                       f"issues/new?title=crash%3A+{__version__}&body="
+                       + urllib.parse.quote(body))
+                webbrowser.open(url)
+                print(f"opened a pre-filled issue - review and submit "
+                      f"({url[:70]}...)")
                 continue
             if cmd == "update" or cmd == "update --json":
                 # the product's ONLY outbound call: user-invoked, read-
