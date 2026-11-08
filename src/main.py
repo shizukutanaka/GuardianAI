@@ -396,8 +396,12 @@ def main() -> None:
                 continue
             if cmd == "status --json":
                 # machine-readable status for monitoring/scripting.
+                # /api/status carries version - the CLI parity should too.
                 import json as _json
-                print(_json.dumps(audit_integrity(), ensure_ascii=False))
+                from guardian_ai import __version__
+                print(_json.dumps(
+                    {**audit_integrity(), "version": __version__},
+                    ensure_ascii=False))
                 continue
             if cmd == "status":
                 show_status(conn, executor)
