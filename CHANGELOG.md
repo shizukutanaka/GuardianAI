@@ -43,5 +43,27 @@ All notable changes to ShieldAI. Format follows
   silently overwrote each other); .iss paths were script-relative
 - bandit: nosec belongs on the flagged line and inside real comments
   (a `# nosec` inside a triple-quoted string is string content)
-- complete UI i18n + CLI i18n (banner/help/warnings), --lang flag,
-  doctor + /api/doctor, ui_url.txt second-launch, arrow-key tabs
+
+### Post-tag additions
+- complete i18n - every UI string lives in the JA/EN dict (tabs,
+  buttons, badges, tables, stages, toasts, aria-labels, interpolated
+  strings via tf())
+- CLI i18n - banner, help, warnings, prompts, result display labels
+  via SHIELDAI_LANG / --lang / OS locale
+- `doctor` + GET /api/doctor + Doctor button - environment self-check
+  shared between CLI and UI (crypto / data_dir / db / chain tip /
+  ollama / license / network state)
+- `update`/`report`/`/api/update` honor SHIELDAI_NO_NETWORK - hard-cut
+  for air-gapped installs
+- `ui` saves the token URL to data_dir/ui_url.txt - a second launch
+  opens the live dashboard instead of crashing on EADDRINUSE
+- arrow-key tab navigation + role=tabpanel + th scope + :focus-visible
+  (keyboard and screen-reader a11y)
+- /api/backup + Backup button - last CLI/UI parity gap
+- version shown on status (text), status --json, /api/status, UI badge
+- README badges (CI status, release, license, Sponsors) + bug report
+  template that asks for `shieldai diag`
+- generated test files gitignored - the templates are the source of
+  truth
+- PyInstaller 64-bit bootloader repaired (C: disk-full partial install
+  had wiped it - found by actually rebuilding the exe)
