@@ -47,6 +47,58 @@ SHIELDAI - ローカル AI コントロールプレーン
 """},
 }
 
+# user-facing warnings - the 80/20 of CLI i18n: a JA user should not
+# get a compromise warning in English. Technical field names and JSON
+# keys stay English (they're protocol, not prose).
+_CLI_STR["en"].update({
+    "warn_chain": "[WARN] audit chain broken at #{at}: {reason} - "
+                  "logs may have been tampered with",
+    "abort_oneshot": "Aborting - refusing a one-shot run on a broken "
+                     "audit chain.",
+    "ack_prompt": "Continue anyway? The audit trail may be unreliable. "
+                  "[y/N]: ",
+    "abort_write": "Aborting - do not write to a broken audit chain.",
+    "no_entries": "(no audit entries)",
+    "warn_history": "WARNING: audit chain is broken - entries may be "
+                    "tampered",
+    "warn_forged": "WARNING: {n} forged work-record row(s) - "
+                   "invalid signature",
+    "no_tasks": "no tasks",
+    "no_forged": "no forged work-record rows",
+    "showing": "(showing {shown} of {total})",
+    "goodbye": "Goodbye!"})
+_CLI_STR["ja"].update({
+    "warn_chain": "[警告] #{at} で監査チェーンが破損: {reason} - "
+                  "ログが改竄された可能性があります",
+    "abort_oneshot": "中止します - 破損した監査チェーンでの "
+                     "ワンショット実行を拒否しました。",
+    "ack_prompt": "続行しますか? 監査証跡は信頼できない可能性が"
+                  "あります。[y/N]: ",
+    "abort_write": "中止します - 破損した監査チェーンには書き込み"
+                   "ません。",
+    "no_entries": "(監査エントリがありません)",
+    "warn_history": "警告: 監査チェーンが破損 - エントリは改竄された"
+                    "可能性があります",
+    "warn_forged": "警告: {n} 件の偽造作業記録 - 署名が無効です",
+    "no_tasks": "作業なし",
+    "no_forged": "偽造作業記録行はありません",
+    "showing": "({shown} / {total} 件を表示)",
+    "goodbye": "終了します"})
+
+
+def _t(lang: str, key: str, **fmt) -> str:
+    """Localized string lookup with format args; falls back to en."""
+    s = (_CLI_STR.get(lang, _CLI_STR["en"]).get(key)
+         or _CLI_STR["en"].get(key, key))
+    return s.format(**fmt) if fmt else s
+
+
+def _lang_hint() -> str:
+    """Display helpers run outside main()'s scope - re-detect the
+    locale from env/argv/OS the same way main() did."""
+    return _cli_lang(sys.argv[1:])
+
+
 _CLI_STR["en"]["help"] = """Commands:
   <request>     classify -> plan -> execute (100% local) -> audit
   history [N]   show the N most recent audit entries (default 10)
@@ -128,12 +180,13 @@ def show_history(conn, limit: int = 10) -> None:
         "latency_ms, substr(result, 1, 50) "
         "FROM audit_logs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     if not rows:
-        print("(no audit entries)")
+        print(_t(_lang_hint(), "no_entries"))
         return
     # say when the view is capped - N rows are not the whole trail.
     total = conn.execute("SELECT COUNT(*) FROM audit_logs").fetchone()[0]
     if len(rows) < total:
-        print(f"(showing {len(rows)} of {total})")
+        print(_t(_lang_hint(), "showing", shown=len(rows),
+                 total=total))
     for row in reversed(rows):
         lat = f"  {row[4]}ms" if row[4] is not None else ""
         print(f"  #{row[0]} [{row[1]}] {row[3]}{lat}  {row[2]}")
@@ -206,22 +259,20 @@ def main() -> None:
         one_shot = "ui"
     chain = verify_audit_chain(conn)
     if not chain.get("ok"):
-        print(f"[WARN] audit chain broken at #{chain.get('broken_at')}: "
-              f"{chain.get('reason', '')} - logs may have been tampered with")
+        print(_t(lang, "warn_chain", at=chain.get("broken_at"),
+                 reason=chain.get("reason", "")))
         if one_shot:
             # a non-interactive run cannot answer the ack gate - refuse
             # to touch a compromised trail (fail-closed, same as 'N').
-            print("Aborting - refusing a one-shot run on a broken "
-                  "audit chain.", file=sys.stderr)
+            print(_t(lang, "abort_oneshot"), file=sys.stderr)
             conn.close()
             return
         try:
-            choice = input("Continue anyway? The audit trail may be "
-                           "unreliable. [y/N]: ").strip().lower()
+            choice = input(_t(lang, "ack_prompt")).strip().lower()
         except (KeyboardInterrupt, EOFError):
             choice = ""
         if choice not in ("y", "yes"):
-            print("Aborting - do not write to a broken audit chain.")
+            print(_t(lang, "abort_write"))
             conn.close()
             return
 
@@ -289,8 +340,7 @@ def main() -> None:
                 # same gate as export/backup - warn before showing a
                 # compromised trail, don't silently present tampered data.
                 if not verify_audit_chain(conn).get("ok"):
-                    print("WARNING: audit chain is broken - entries may "
-                          "be tampered")
+                    print(_t(lang, "warn_history"))
                 show_history(conn, max(1, n))
                 continue
             if cmd == "ui" or cmd.startswith("ui "):
@@ -314,8 +364,7 @@ def main() -> None:
                 from guardian_ai.db import _forged_work_records
                 forged = _forged_work_records(conn)
                 if forged:
-                    print(f"WARNING: {forged} forged work-record row(s) - "
-                          "invalid signature")
+                    print(_t(lang, "warn_forged", n=forged))
                 total = conn.execute(
                     "SELECT COUNT(*) FROM task_queue").fetchone()[0]
                 if cmd.endswith("--json"):
@@ -335,11 +384,12 @@ def main() -> None:
                         ensure_ascii=False))
                 else:
                     if not rows:
-                        print("no tasks")
+                        print(_t(lang, "no_tasks"))
                     elif len(rows) < total:
                         # say when the view is capped - 20 rows are not
                         # the whole work record.
-                        print(f"(showing {len(rows)} of {total})")
+                        print(_t(_lang_hint(), "showing", shown=len(rows),
+                 total=total))
                     for st, ag, desc, ts in rows:
                         print(f"[{st:8}] {ag:12} {(desc or '')[:50]} "
                               f"({ts[:16]})")
@@ -374,7 +424,7 @@ def main() -> None:
                         ensure_ascii=False))
                 else:
                     if not rows:
-                        print("no forged work-record rows")
+                        print(_t(lang, "no_forged"))
                     for r in rows:
                         print(f"[{r['table']}] #{r['id']} {r['agent']} "
                               f"({r.get('reason','')})")
@@ -694,7 +744,7 @@ def main() -> None:
         conn.close()
 
     if not one_shot:
-        print("Goodbye!")
+        print(_t(lang, "goodbye"))
 
 
 if __name__ == "__main__":
