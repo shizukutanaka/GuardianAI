@@ -194,7 +194,9 @@ def show_history(conn, limit: int = 10) -> None:
 
 
 def show_status(conn, executor) -> None:
+    from guardian_ai import __version__
     audit = audit_integrity()
+    print(f"version: {__version__}")
     agents = conn.execute("SELECT COUNT(*) FROM agents").fetchone()[0]
     queued = conn.execute("SELECT status, COUNT(*) FROM task_queue GROUP BY status").fetchall()
     chain = audit.get("chain", {})
