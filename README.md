@@ -29,10 +29,11 @@ data leaves the machine.
 
 ## Health Status
 ```
-✓ audit_logs: 33+ entries
-✓ integrity: ok (structural + sha256 hash chain, tamper-evident)
+✓ integrity: ok (HMAC chain + chain_state + append-only triggers,
+  tamper-evident; work records signed)
 ✓ agents: 7 (all AgentType values seeded)
-✓ tests: 11/11 PASS (assertions actually execute)
+✓ tests: 13/13 PASS (assertions actually execute; includes a main.py
+  import check)
 ```
 
 ## Usage examples

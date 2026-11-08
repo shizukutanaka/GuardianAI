@@ -1,5 +1,10 @@
 # ShieldAI 自動化テスト・CI/CD 構築完了
 
+> **Historical report (initial test/CI setup).** Current state is in
+> README.md + AGENTS.md: 13/13 tests, exe/installer/SBOM/release
+> workflow, licensing, i18n. This file documents the original setup
+> commit, not the present product.
+
 ## 成果
 
 ### 自動化テスト
