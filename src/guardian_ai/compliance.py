@@ -190,6 +190,19 @@ def doctor_checks(conn, executor) -> List[Dict[str, Any]]:
     _app("network", True,
          "air-gapped (no_network)"
          if _nn else "local-only (update check is user-invoked)")
+    # a corrupt config.json is silently ignored - the user's settings
+    # just don't apply. Surface it instead of falling back quietly.
+    try:
+        from guardian_ai.paths import data_dir
+        cfg_path = data_dir() / "config.json"
+        if cfg_path.exists():
+            import json as _json
+            _json.loads(cfg_path.read_text("utf-8"))
+            _app("config", True, "readable")
+        else:
+            _app("config", True, "defaults (no config.json)")
+    except Exception as e:
+        _app("config", False, f"unreadable - ignored: {e}")
     return checks
 
 
