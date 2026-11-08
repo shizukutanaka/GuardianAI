@@ -5,6 +5,7 @@
   --deploy  build dist/shieldai.pyz - a single-file zipapp of src/.
             Local-first: no PyPI, no twine, no cloud. Run it with
             `python dist/shieldai.pyz`.
+  --deploy --exe build the pyz then the Windows exe (scripts/build_exe.py)
 """
 import subprocess
 import sys
@@ -64,7 +65,18 @@ def main() -> None:
         if not run_tests():
             print("[FAIL] tests failed - refusing to deploy")
             sys.exit(1)
-        build()
+        if not build():
+            sys.exit(1)
+        # '--deploy --exe' builds the full artifact pipeline in one
+        # command (pyz + exe + self-checks) - the pyz alone is the
+        # fast path, the exe is the user-facing distribution.
+        if "--exe" in sys.argv:
+            exe = subprocess.run(
+                [sys.executable,
+                 str(ROOT / "scripts" / "build_exe.py")])
+            if exe.returncode != 0:
+                print("[FAIL] exe build failed")
+                sys.exit(1)
         return
     print(__doc__)
 
