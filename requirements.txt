@@ -4,8 +4,11 @@
 # Runtime: cryptography is the ONLY hard dependency.
 # router / first_principles / executor / ollama client / compliance /
 # db / kms / paths are stdlib-only.
+#
+# Requires Python >= 3.11 (expressed here, NOT as a requirements line -
+# 'python>=3.11' would make pip search for a package literally named
+# 'python' and fail every install, as the release run proved).
 
-python>=3.11
 cryptography>=41,<46
 
 # Optional, install only if you wire them up:
