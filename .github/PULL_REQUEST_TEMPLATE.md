@@ -2,7 +2,7 @@
 <!-- what does this change, and why? -->
 
 ## Honesty check (required)
-<!-- ShieldAI's core claim is that claims match behavior. Answer: -->
+<!-- GuardianAI's core claim is that claims match behavior. Answer: -->
 - [ ] This change does not overclaim (e.g. "chain ok" only on a tip
       check is honest; claiming "verified" without running the full
       check is not)

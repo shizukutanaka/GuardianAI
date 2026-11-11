@@ -1,4 +1,4 @@
-# ShieldAI - project state & handoff
+# GuardianAI - project state & handoff
 
 ## What this is
 Local-first AI control plane. 100% offline. No data leaves the machine

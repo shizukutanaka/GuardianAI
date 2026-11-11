@@ -1,17 +1,17 @@
-# ShieldAI - Universal AI Control Plane
+# GuardianAI - Universal AI Control Plane
 
 [![Test Runner](https://github.com/shizukutanaka/GuardianAI/actions/workflows/test.yml/badge.svg)](https://github.com/shizukutanaka/GuardianAI/actions/workflows/test.yml)
 [![Release](https://img.shields.io/github/v/release/shizukutanaka/GuardianAI)](https://github.com/shizukutanaka/GuardianAI/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-ff69b4)](https://github.com/sponsors/shizukutanaka)
 
-![ShieldAI dashboard](docs/screenshot.png)
+![GuardianAI dashboard](docs/screenshot.png)
 
-Free, local-first, donation-supported. If ShieldAI is useful to you:
+Free, local-first, donation-supported. If GuardianAI is useful to you:
 [sponsor it on GitHub](https://github.com/sponsors/shizukutanaka).
 
 ## Overview
-ShieldAI is a local-first AI control plane: classify a request, pick an agent,
+GuardianAI is a local-first AI control plane: classify a request, pick an agent,
 build a first-principles task plan, and audit everything. 100% offline - no
 data leaves the machine.
 
