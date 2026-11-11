@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        ShieldAI's core claim is that **claims match behavior**. A feature
+        GuardianAI's core claim is that **claims match behavior**. A feature
         that overclaims ("chain ok" on a tip check, "verified" without
         running it) will be pushed back on.
   - type: textarea

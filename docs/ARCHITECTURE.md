@@ -1,4 +1,4 @@
-# ShieldAI Architecture
+# GuardianAI Architecture
 
 Local-first AI control plane. 100% offline - no data leaves the machine
 (the sole exception: `update`/`report`/`/api/update`, user-invoked,

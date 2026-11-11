@@ -1,4 +1,4 @@
-# ShieldAI 自動化テスト・CI/CD 構築完了
+# GuardianAI 自動化テスト・CI/CD 構築完了
 
 > **Historical report (initial test/CI setup).** Current state is in
 > README.md + AGENTS.md: 13/13 tests, exe/installer/SBOM/release
@@ -81,7 +81,7 @@ python deploy.py --deploy    # 本番デプロイ
 ## ファイル構成
 
 ```
-ShieldAI/
+GuardianAI/
 ├── .github/workflows/
 │   ├── test.yml        # テスト実行
 │   └── ci.yml          # セキュリティスキャン

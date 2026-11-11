@@ -1,6 +1,6 @@
 # Security Policy
 
-ShieldAI is a local-first product - its attack surface is the local
+GuardianAI is a local-first product - its attack surface is the local
 machine and the loopback web UI (127.0.0.1 only, per-run session token).
 
 ## Reporting a vulnerability

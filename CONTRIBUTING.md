@@ -1,6 +1,6 @@
 # Contributing
 
-ShieldAI is MIT-licensed and donation-funded via GitHub Sponsors.
+GuardianAI is MIT-licensed and donation-funded via GitHub Sponsors.
 Contributions are welcome - the bar is that the product keeps its core
 claim: **claims must match behavior**.
 
