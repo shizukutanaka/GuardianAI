@@ -12,7 +12,6 @@ Ollama synthesis (labelled "未検証") -> redact -> HMAC audit chain.
 - main pushed continuously to GitHub (shizukutanaka/GuardianAI);
   13/13 generated tests PASS (includes test_main.py - imports the CLI
   entry point so a broken main.py can't ship silently).
-- Funding model: MIT + GitHub Sponsors only (`.github/FUNDING.yml`).
 - Legal/community: `LICENSE` (MIT), `CODE_OF_CONDUCT.md`,
   `SECURITY.md` + `.well-known/security.txt` (RFC 9116),
   `.github/dependabot.yml` (weekly pip dep scan),

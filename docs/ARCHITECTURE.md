@@ -480,7 +480,6 @@ manifests/s/ShieldAI/...     winget manifest (version, installer,
     test.yml                 run tests on push/PR
     ci.yml                   bandit + tests on push/PR
     release.yml              tag -> build all -> publish release
-  FUNDING.yml                GitHub Sponsors
   ISSUE_TEMPLATE/
     bug_report.yml           structured bug report + diag field
     feature_request.yml      'does it keep claims honest' check
