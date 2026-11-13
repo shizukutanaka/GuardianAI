@@ -1,6 +1,6 @@
 # Contributing
 
-GuardianAI is MIT-licensed and donation-funded via GitHub Sponsors.
+GuardianAI is MIT-licensed.
 Contributions are welcome - the bar is that the product keeps its core
 claim: **claims must match behavior**.
 
