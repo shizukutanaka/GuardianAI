@@ -9,7 +9,9 @@
 ## Overview
 GuardianAI is a local-first AI control plane: classify a request, pick an agent,
 build a first-principles task plan, and audit everything. 100% offline - no
-data leaves the machine.
+data leaves the machine (sole exception: the user-invoked `update`
+command checks GitHub Releases for a newer version; it sends nothing
+and can be hard-disabled via the `no_network` setting).
 
 ## Architecture
 - **Router**: 7-agent classification (accounting, legal, HR, IT, developer, medical, general)
