@@ -53,7 +53,7 @@ def main() -> int:
     except Exception as e:
         print(f"[FAIL] exe self-check could not run: {e}")
         return 1
-    if r.returncode != 0 or "ShieldAI" not in r.stdout:
+    if r.returncode != 0 or "GuardianAI" not in r.stdout:
         print(f"[FAIL] exe self-check: rc={r.returncode} "
               f"{r.stderr[:200]}")
         return 1

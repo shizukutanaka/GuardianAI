@@ -1,7 +1,7 @@
-# ShieldAI Commercial License — DRAFT for legal review
+# GuardianAI Commercial License — DRAFT for legal review
 
 > **Status: proposal, not effective.** This is a working draft for the
-> business decision on how ShieldAI is funded. It is not legal advice and
+> business decision on how GuardianAI is funded. It is not legal advice and
 > must be reviewed by counsel before any repo license file is changed.
 
 ## DECIDED (2026-11-08): donation model

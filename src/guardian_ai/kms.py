@@ -1,4 +1,4 @@
-"""ShieldAI KMS - local key management.
+"""GuardianAI KMS - local key management.
 
 Resolution order for a service key (all storage stays on this machine):
 

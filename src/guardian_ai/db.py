@@ -1,4 +1,4 @@
-"""ShieldAI Database - SQLite schema and initialization"""
+"""GuardianAI Database - SQLite schema and initialization"""
 import hashlib
 import hmac
 import sqlite3

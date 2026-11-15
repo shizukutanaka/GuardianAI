@@ -1,4 +1,4 @@
-# ShieldAI - requirements
+# GuardianAI - requirements
 # First principles: only what the code actually imports.
 #
 # Runtime: cryptography is the ONLY hard dependency.

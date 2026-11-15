@@ -1,4 +1,4 @@
-"""ShieldAI Compliance - verifiable local checks only.
+"""GuardianAI Compliance - verifiable local checks only.
 
 A compliance module that always answers "compliant" is a false oracle.
 This implementation reports only what can actually be verified on this

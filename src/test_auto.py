@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ShieldAI Automation Tests - generates and runs real, executable tests.
+"""GuardianAI Automation Tests - generates and runs real, executable tests.
 
 Each generated file calls test() under __main__, so a PASS means the
 assertions actually ran. sys.path is fixed inside every generated file,

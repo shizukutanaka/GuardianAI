@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ShieldAI deployment script.
+"""GuardianAI deployment script.
 
   --test    run the full test suite (gate for --deploy)
   --deploy  build dist/shieldai.pyz - a single-file zipapp of src/.

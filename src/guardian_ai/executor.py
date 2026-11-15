@@ -1,4 +1,4 @@
-"""ShieldAI Executor - runs the first-principles plan, deterministically.
+"""GuardianAI Executor - runs the first-principles plan, deterministically.
 
 Every step is 100% local and verifiable:
 
@@ -196,7 +196,7 @@ def _verify_unknowns(unknowns: List[str], corpus: str) -> List[Dict[str, str]]:
 
 def _synthesize(agent: str, files: List[Path], evidence: List[Dict[str, str]],
                 verification: List[Dict[str, str]]) -> str:
-    lines = [f"[ShieldAI/{agent}] ローカル解析結果"]
+    lines = [f"[GuardianAI/{agent}] ローカル解析結果"]
     if files:
         lines.append(f"ソース: {', '.join(p.name for p in files)} ({len(files)} ファイル)")
     else:
@@ -223,7 +223,7 @@ def _synthesize(agent: str, files: List[Path], evidence: List[Dict[str, str]],
 
 
 _LLM_SYSTEM = (
-    "あなたは ShieldAI のローカル合成エンジンです。"
+    "あなたは GuardianAI のローカル合成エンジンです。"
     "提供された証拠だけに基づいて簡潔に答えてください。"
     "証拠にない事実を作ってはいけません。不明な点は『不明』と明記してください。")
 
