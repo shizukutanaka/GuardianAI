@@ -1,4 +1,4 @@
-"""ShieldAI CLI - classify requests, execute first-principles plans, audit everything."""
+"""GuardianAI CLI - classify requests, execute first-principles plans, audit everything."""
 import os
 import sys
 import time
@@ -17,7 +17,7 @@ from guardian_ai.router import Router
 _CLI_STR = {
     "en": {"banner": """
 ==================================================
-SHIELDAI - LOCAL AI CONTROL PLANE
+GUARDIANAI - LOCAL AI CONTROL PLANE
 ==================================================
 Type a request, or 'help' / 'quit'.
 Examples:
@@ -32,7 +32,7 @@ Tip: paste log/contract text or a local file path into the request.
 """},
     "ja": {"banner": """
 ==================================================
-SHIELDAI - ローカル AI コントロールプレーン
+GUARDIANAI - ローカル AI コントロールプレーン
 ==================================================
 リクエストを入力、または 'help' / 'quit'。
 例:
@@ -519,7 +519,7 @@ def main() -> None:
                     import json as _json
                     print(_json.dumps({"version": __version__}))
                 else:
-                    print(f"ShieldAI {__version__}")
+                    print(f"GuardianAI {__version__}")
                 continue
             if cmd == "diag" or cmd == "diag --json":
                 # paste-ready support info - 'please run diag' should be
@@ -918,7 +918,7 @@ if __name__ == "__main__":
             crash = data_dir() / "crash.log"
             crash.write_text(traceback.format_exc(),
                              encoding="utf-8")
-            print(f"\nShieldAI stopped unexpectedly - details were "
+            print(f"\nGuardianAI stopped unexpectedly - details were "
                   f"written to {crash}\nReport it with `diag` output.",
                   file=sys.stderr)
         except Exception:

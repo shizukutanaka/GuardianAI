@@ -1,4 +1,4 @@
-"""Local web UI for ShieldAI - stdlib http.server only, no external deps.
+"""Local web UI for GuardianAI - stdlib http.server only, no external deps.
 
 Serves a single-page dashboard + JSON API on 127.0.0.1. All assets are
 embedded (no CDN/fonts/frameworks) so the local-only claim holds:
@@ -95,7 +95,7 @@ _HTML = r"""<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark light">
-<title>ShieldAI - Local AI Control Plane</title>
+<title>GuardianAI - Local AI Control Plane</title>
 <style>
 /* ---------- design tokens (single source of truth) ---------- */
 :root{
@@ -223,7 +223,7 @@ td{padding:8px 10px;border-top:1px solid var(--border);
 <div class="wrap">
 
 <header>
-  <div class="logo">ShieldAI</div>
+  <div class="logo">GuardianAI</div>
   <select id="lang" aria-label="Language" onchange="setLang(this.value)"
     style="background:var(--card);color:var(--text);border:1px solid
       var(--border);border-radius:6px;padding:4px 8px;font-size:13px">
@@ -1062,12 +1062,12 @@ def serve(port: int = PORT, open_browser: bool = True,
             except Exception:
                 pass
             if saved:
-                print(f"ShieldAI is already running - opening "
+                print(f"GuardianAI is already running - opening "
                       f"{saved.split('?')[0]}")
                 if open_browser:
                     webbrowser.open(saved)
             else:
-                print(f"ShieldAI is already running on "
+                print(f"GuardianAI is already running on "
                       f"http://{HOST}:{port} - use the URL printed by "
                       f"the first instance.")
             return
@@ -1090,7 +1090,7 @@ def serve(port: int = PORT, open_browser: bool = True,
         url_file.write_text(url, encoding="utf-8")
     except Exception:
         url_file = None
-    print(f"ShieldAI UI: {url}  (Ctrl+C to stop)")
+    print(f"GuardianAI UI: {url}  (Ctrl+C to stop)")
     if open_browser:
         webbrowser.open(url)
     try:

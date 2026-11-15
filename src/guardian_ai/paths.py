@@ -1,4 +1,4 @@
-"""ShieldAI data-directory resolution.
+"""GuardianAI data-directory resolution.
 
 Runtime state (SQLite DB, KMS keys) is user state, not source code:
 - normal source tree -> stays next to guardian_ai/ (existing behaviour)

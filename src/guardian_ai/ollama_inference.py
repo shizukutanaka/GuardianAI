@@ -1,4 +1,4 @@
-"""ShieldAI Ollama client - local LLM inference, no cloud.
+"""GuardianAI Ollama client - local LLM inference, no cloud.
 
 Talks to a local Ollama daemon over HTTP (default http://localhost:11434).
 Everything stays on this machine, same as the rest of the platform.

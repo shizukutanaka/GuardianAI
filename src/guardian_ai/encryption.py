@@ -1,4 +1,4 @@
-"""ShieldAI Encryption - AES-256-GCM with authenticated key management.
+"""GuardianAI Encryption - AES-256-GCM with authenticated key management.
 
 Wire format: base64( iv(12) || ciphertext || tag(16) )
 
