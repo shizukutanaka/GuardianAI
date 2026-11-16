@@ -143,6 +143,9 @@ _CLI_STR["en"]["help"] = """Commands:
   ui [ja|en]    open the local web dashboard in that locale
                 (http://127.0.0.1:8765)
   config [lang <ja|en>] show/persist preferences (data_dir/config.json)
+  mcp           MCP stdio server for AI agents (read-only tools:
+                classify / scan / redact / audit integrity; one-shot
+                only - run `shieldai mcp`, not inside the REPL)
   help          show this message
   quit          exit
 """
@@ -172,6 +175,9 @@ _CLI_STR["ja"]["help"] = """コマンド:
   verify        HMAC 監査チェーン検証を明示的に再実行
   ui [ja|en]    指定ロケールでローカル Web ダッシュボードを開く
                 (http://127.0.0.1:8765)
+  mcp           AI エージェント向け MCP stdio サーバー (読み取り専用
+                ツール: 分類 / 機密検出 / 伏字化 / 監査整合性。
+                ワンショット専用 - `shieldai mcp` で起動、REPL 内不可)
   help          このメッセージを表示
   quit          終了
 """
@@ -307,6 +313,16 @@ def main() -> None:
             sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         except Exception:
             pass
+    # 'mcp' runs the MCP (Model Context Protocol) stdio server. It is
+    # intercepted BEFORE Router/Executor/DB setup on purpose: a stdio
+    # server must own stdout exclusively (any banner or chain warning
+    # printed here would corrupt the JSON-RPC stream), and the
+    # read-only tools it serves need neither the Executor nor a
+    # writable audit DB - so a broken chain cannot gate it either.
+    if sys.argv[1:2] == ["mcp"]:
+        from guardian_ai.mcp_server import main as _mcp_main
+        _mcp_main()
+        return
     router = Router()
     executor = Executor()
     conn = init_database()

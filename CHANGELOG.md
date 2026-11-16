@@ -4,6 +4,19 @@ All notable changes to GuardianAI. Format follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow
 [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- MCP (Model Context Protocol) stdio server: `shieldai mcp`
+  (`guardian_ai/mcp_server.py`, stdlib-only JSON-RPC - no new
+  dependency). Exposes five read-only tools to AI agents:
+  `classify_request` (analysis only - no execution, no audit write),
+  `scan_sensitive` (pattern names only, never the secret),
+  `redact_text`, `audit_integrity` (default DB only, no path
+  parameter), `list_agents`. The Executor, file paths, config
+  writes and the update check are deliberately not reachable
+  through MCP.
+
 ## [1.0.0-rc1] - 2026-11
 
 ### Added

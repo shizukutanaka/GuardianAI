@@ -283,6 +283,78 @@ def test():
     assert r['agent'] == 'it' and 'entry_id' in r
     srv.shutdown()
 """ + FOOTER,
+
+    "mcp": HEADER + """
+def test():
+    # Real stdio round-trip: spawn the MCP server as a subprocess and
+    # speak newline-delimited JSON-RPC to it, exactly as a client does.
+    import json, os, subprocess, sys
+    src = os.path.abspath(os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), '..'))
+    env = dict(os.environ, PYTHONPATH=src)
+    proc = subprocess.Popen(
+        [sys.executable, '-m', 'guardian_ai.mcp_server'],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        text=True, encoding='utf-8', env=env)
+    requests = [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+         "params": {"protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "test", "version": "0"}}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call",
+         "params": {"name": "classify_request",
+                    "arguments": {"request": "契約書の法律リスク"}}},
+        {"jsonrpc": "2.0", "id": 4, "method": "tools/call",
+         "params": {"name": "scan_sensitive",
+                    "arguments": {"text": "key is AKIAIOSFODNN7EXAMPLE ok"}}},
+        {"jsonrpc": "2.0", "id": 5, "method": "tools/call",
+         "params": {"name": "redact_text",
+                    "arguments": {"text": "password: hunter2 please"}}},
+        {"jsonrpc": "2.0", "id": 6, "method": "tools/call",
+         "params": {"name": "audit_integrity", "arguments": {}}},
+        {"jsonrpc": "2.0", "id": 7, "method": "no/such"},
+        {"jsonrpc": "2.0", "id": 8, "method": "tools/call",
+         "params": {"name": "execute_request",
+                    "arguments": {"request": "x"}}},
+    ]
+    payload = "\\n".join(json.dumps(r) for r in requests) + "\\n"
+    out, _ = proc.communicate(payload, timeout=60)
+    assert proc.returncode == 0, proc.returncode
+    by_id = {}
+    for line in out.splitlines():
+        msg = json.loads(line)
+        by_id[msg["id"]] = msg
+    # initialize handshake
+    init = by_id[1]["result"]
+    assert init["serverInfo"]["name"] == "guardian-ai"
+    assert init["protocolVersion"] == "2024-11-05"
+    assert "tools" in init["capabilities"]
+    # tool list: exactly the read-only set, nothing executable
+    names = {t["name"] for t in by_id[2]["result"]["tools"]}
+    assert names == {"classify_request", "scan_sensitive", "redact_text",
+                     "audit_integrity", "list_agents"}, names
+    # classify: pure analysis routes to the legal agent
+    body = json.loads(by_id[3]["result"]["content"][0]["text"])
+    assert by_id[3]["result"]["isError"] is False
+    assert body["agent"] == "legal"
+    assert len(body["tasks"]) > 0
+    # scan: pattern names only - the secret itself must not come back
+    body = json.loads(by_id[4]["result"]["content"][0]["text"])
+    assert "aws_access_key" in body["findings"]
+    assert "AKIAIOSFODNN7EXAMPLE" not in by_id[4]["result"]["content"][0]["text"]
+    # redact: the secret is replaced, not echoed
+    body = json.loads(by_id[5]["result"]["content"][0]["text"])
+    assert "<REDACTED:password>" in body["redacted"]
+    assert "hunter2" not in body["redacted"]
+    # audit_integrity: shape only (ok depends on whether a DB exists)
+    body = json.loads(by_id[6]["result"]["content"][0]["text"])
+    assert "ok" in body
+    # unknown method is a protocol error; unknown tool is a tool error
+    assert by_id[7]["error"]["code"] == -32601
+    assert by_id[8]["result"]["isError"] is True
+""" + FOOTER,
 }
 
 

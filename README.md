@@ -80,12 +80,43 @@ venv/Scripts/python scripts/build_exe.py # -> dist/shieldai.exe + SHA256SUMS.txt
 # CLI commands inside main.py (also one-shot: `python src/main.py <command>`):
 #   history [N], tasks, status, verify, forged, export, backup,
 #   decrypt FILE, license [FILE], version, update, diag, report,
-#   doctor, ui [ja|en], help, quit
+#   doctor, ui [ja|en], mcp, help, quit
 #   every command supports --json for scripting
 #   conventional flags work too: --version / -v / --help / -h
 
 # Check health
 python -c "import sqlite3; conn=sqlite3.connect('src/guardian_ai/shield_ai.db'); c=conn.cursor(); c.execute('SELECT COUNT(*) FROM audit_logs'); print('audit_logs:', c.fetchone()[0]); c.execute('PRAGMA integrity_check'); print('integrity:', c.fetchone()[0])"
+```
+
+## MCP server (for AI agents)
+
+`shieldai mcp` runs a Model Context Protocol server over stdio, so an
+AI agent (Claude Desktop, Claude Code, ...) can call GuardianAI's
+read-only core as tools. It is stdlib-only (no `mcp` package needed)
+and fully local - no network code, nothing leaves the machine.
+
+Tools (read-only; execution, file access and writes are NOT exposed):
+
+| Tool | What it does |
+|---|---|
+| `classify_request` | Classify a request to an agent + first-principles plan. Analysis only - nothing is executed, nothing is written to the audit log. |
+| `scan_sensitive` | Names of sensitive-data patterns found in text (keys, tokens, passwords, ...). The matched secret itself is never returned. |
+| `redact_text` | The text with sensitive spans replaced by `<REDACTED:name>` markers. |
+| `audit_integrity` | Verify the local audit DB (sqlite check + HMAC chain). |
+| `list_agents` | The agent types and the complexity -> model map. |
+
+Client configuration example:
+
+```json
+{
+  "mcpServers": {
+    "guardian-ai": {
+      "command": "python",
+      "args": ["src/main.py", "mcp"],
+      "cwd": "/path/to/GuardianAI"
+    }
+  }
+}
 ```
 
 ## License

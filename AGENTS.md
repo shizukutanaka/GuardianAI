@@ -49,6 +49,12 @@ it here (this list went stale twice when features landed). Notes:
   persists it); `shieldai ui` without an arg opens the dashboard in
   the persisted locale; `--json` on every command (including
   `verify <file> --json`)
+- `mcp` (one-shot only) runs the MCP stdio server
+  (guardian_ai/mcp_server.py, stdlib JSON-RPC) - intercepted in
+  main() BEFORE Router/Executor/DB init so stdout stays pure
+  JSON-RPC and a broken chain cannot gate it. Read-only tools only
+  (classify/scan/redact/audit-integrity/list-agents); the Executor,
+  file paths, config writes and update are deliberately unreachable.
 - `config` persists user prefs to data_dir/config.json - `lang <ja|en>`
   and `no_network <on|off>` (env SHIELDAI_NO_NETWORK is the other source)
 - the Ollama host is deliberately hardcoded to localhost - making it
