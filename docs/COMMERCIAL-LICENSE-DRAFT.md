@@ -34,7 +34,7 @@ model — code stays visible, commercial use requires a license:
    evaluation. Production use requires a signed license file
    (verified offline by `guardian_ai/licensing.py` — no activation
    server, consistent with the local-only claim).
-2. **Per-seat**: each `shieldai.license` covers N seats; the license
+2. **Per-seat**: each `guardianai.license` covers N seats; the license
    file is Ed25519-signed and machine-checkable.
 3. **No redistribution**: compiled or source redistribution requires
    written permission.

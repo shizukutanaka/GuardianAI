@@ -878,8 +878,9 @@ class _Handler(BaseHTTPRequestHandler):
             # same check as the CLI 'update' command - the product's
             # ONLY outbound call: user-invoked (button), read-only,
             # sends nothing. No auto-update without signature checks.
-            # SHIELDAI_NO_NETWORK hard-cuts it for air-gapped installs.
-            _nn = os.environ.get("SHIELDAI_NO_NETWORK")
+            # GUARDIANAI_NO_NETWORK hard-cuts it for air-gapped installs.
+            from guardian_ai.paths import env
+            _nn = env("NO_NETWORK")
             if not _nn:
                 try:
                     from guardian_ai.paths import data_dir
@@ -899,7 +900,7 @@ class _Handler(BaseHTTPRequestHandler):
                 req = urllib.request.Request(
                     "https://api.github.com/repos/shizukutanaka/"
                     "GuardianAI/releases/latest",
-                    headers={"User-Agent": "shieldai-update-check",
+                    headers={"User-Agent": "guardianai-update-check",
                              "Accept": "application/vnd.github+json"})
                 rel = json.loads(
                     urllib.request.urlopen(req, timeout=10).read())  # nosec B310 - hardcoded https GitHub API URL

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Build the standalone shieldai.exe - no Python required on the
+"""Build the standalone guardianai.exe - no Python required on the
 customer's machine (PyInstaller --onefile).
 
   python scripts/build_exe.py
 
-Output: dist/shieldai.exe. The exe is unsigned - v1 ships it with
+Output: dist/guardianai.exe. The exe is unsigned - v1 ships it with
 SHA256SUMS.txt for manual verification (code signing comes later;
 unsigned+broken is safer than unsigned+silent).
 """
@@ -21,11 +21,11 @@ DIST = ROOT / "dist"
 
 def main() -> int:
     shutil.rmtree(ROOT / "build", ignore_errors=True)
-    for stale in ROOT.glob("shieldai.spec"):
+    for stale in ROOT.glob("guardianai.spec"):
         stale.unlink()
     rc = subprocess.call([
         sys.executable, "-m", "PyInstaller",
-        "--onefile", "--clean", "--name", "shieldai",
+        "--onefile", "--clean", "--name", "guardianai",
         "--paths", str(SRC),
         "--collect-all", "guardian_ai",
         "--distpath", str(DIST),
@@ -34,10 +34,10 @@ def main() -> int:
     ], cwd=str(ROOT))
     if rc:
         return rc
-    # PyInstaller emits shieldai.exe on Windows, bare 'shieldai'
+    # PyInstaller emits guardianai.exe on Windows, bare 'guardianai'
     # elsewhere - the release matrix builds on all three.
-    exe = DIST / ("shieldai.exe" if sys.platform == "win32"
-                  else "shieldai")
+    exe = DIST / ("guardianai.exe" if sys.platform == "win32"
+                  else "guardianai")
     # publish the hash - an unsigned binary is verifiable if the digest
     # is delivered through a second channel (the GitHub release).
     digest = hashlib.sha256(exe.read_bytes()).hexdigest()

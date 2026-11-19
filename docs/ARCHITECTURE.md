@@ -10,7 +10,7 @@ read-only).
 ┌─────────────────────────────────────────────────────────────────┐
 │  FRONTEND                                                       │
 │  ┌─────────────────────┐  ┌─────────────────────────────────┐  │
-│  │ Web Dashboard       │  │ CLI (shieldai.pyz / exe / src)  │  │
+│  │ Web Dashboard       │  │ CLI (guardianai.pyz / exe / src)│  │
 │  │ localhost:8765      │  │ interactive REPL + one-shot      │  │
 │  │ ?t=<token>          │  │ argv commands                    │  │
 │  │ X-Token header      │  │ --json / --lang <lang>           │  │
@@ -74,7 +74,7 @@ read-only).
 │  ┌─────────────────┐        ┌──────────────────────┐            │
 │  │ KMS             │        │ Paths               │            │
 │  │ encryption.py    │        │ data_dir()           │            │
-│  │ local keys       │        │ SHIELDAI_DATA_DIR    │            │
+│  │ local keys       │        │ GUARDIANAI_DATA_DIR  │            │
 │  │ export decrypt   │        │ backups/ .enc .key   │            │
 │  └─────────────────┘        └──────────────────────┘            │
 │           │                            │                        │
@@ -82,7 +82,7 @@ read-only).
 │  ┌─────────────────┐        ┌──────────────────────┐            │
 │  │ Files           │        │ Config               │            │
 │  │ crash.log        │        │ config.json          │            │
-│  │ shieldai.license │        │ lang / no_network    │            │
+│  │ guardianai.license│       │ lang / no_network    │            │
 │  │ ui_url.txt       │        │ persisted prefs      │            │
 │  │ backups/*.db     │        │                      │            │
 │  └─────────────────┘        └──────────────────────┘            │
@@ -93,7 +93,7 @@ read-only).
 
 ```
 request
-  ├─ CLI: 'shieldai <request>' or REPL
+  ├─ CLI: 'guardianai <request>' or REPL
   ├─ Web: POST /api/request {request}
   │
   ▼
@@ -181,14 +181,14 @@ Web Dashboard (webui.py)
   Actions:     Doctor | Check updates | Verify | Export | Decrypt
                Backup | Report issue
   Toast:       result feedback (success/error/info)
-  Offline:     SHIELDAI_NO_NETWORK or config no_network=on
+  Offline:     GUARDIANAI_NO_NETWORK or config no_network=on
                blocks /api/update -> 'outbound calls disabled'
 
 CLI (main.py)
-  REPL:        no argv -> interactive loop with shieldai@> prompt
-  One-shot:    'shieldai <cmd> [args]' runs once and exits
+  REPL:        no argv -> interactive loop with guardianai@> prompt
+  One-shot:    'guardianai <cmd> [args]' runs once and exits
   Flags:       --version/-v --help/-h --lang <lang>
-  i18n:        _cli_lang(): SHIELDAI_LANG -> --lang -> config.json
+  i18n:        _cli_lang(): GUARDIANAI_LANG -> --lang -> config.json
                -> OS locale -> 'en'
                _CLI_STR dict + _t()/tf() for warnings/labels
   Commands:    <request> history tasks status verify forged
@@ -261,14 +261,14 @@ DB (db.py)
 
 KMS (encryption.py + kms.py)
   Keys:    local Ed25519 keypair (signing) + AES key (encrypt)
-           stored in SHIELDAI_DATA_DIR/.shield_keys
+           stored in GUARDIANAI_DATA_DIR/.shield_keys
   Export:  encrypt .enc file with AES key
   Decrypt: verify signature + decrypt with local key
   Chain:   chain_state uses KMS key for HMAC
 
 Paths (paths.py)
-  data_dir(): SHIELDAI_DATA_DIR or default
-              holds DB, KMS keys, crash.log, shieldai.license,
+  data_dir(): GUARDIANAI_DATA_DIR or default
+              holds DB, KMS keys, crash.log, guardianai.license,
               ui_url.txt, config.json, backups/
   backup_dir(): data_dir/backups/
 
@@ -340,8 +340,8 @@ Token:       web UI token generated per-server-run, delivered
    help text = AGENTS.md command list (not duplicated)
 
 8. Files-in-data-dir
-   SHIELDAI_DATA_DIR holds everything - DB, keys, config,
-   backups, crash.log, ui_url.txt, shieldai.license
+   GUARDIANAI_DATA_DIR holds everything - DB, keys, config,
+   backups, crash.log, ui_url.txt, guardianai.license
    (project dir is clean, runtime state is on D:)
 
 9. Files-in-repo
@@ -463,7 +463,7 @@ scripts/
   build_exe.py               PyInstaller build + self-check
   gen_sbom.py                CycloneDX SBOM generator
   license_keygen.py          Ed25519 license key generator
-  shieldai.iss               Inno Setup installer script
+  guardianai.iss             Inno Setup installer script
 
 deploy.py                    zipapp build + self-check + --exe
 

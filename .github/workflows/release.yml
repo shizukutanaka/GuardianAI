@@ -2,7 +2,7 @@
 # attaches them to a GitHub Release, so `git tag v1.0.0 && git push
 # --tags` is the whole release ceremony.
 #
-# Artifacts per OS: shieldai-<os> (+ shieldai.exe on Windows),
+# Artifacts per OS: guardianai-<os> (+ guardianai.exe on Windows),
 # SHA256SUMS.txt, sbom.cyclonedx.json.
 # Unsigned binaries ship with their hash for manual verification -
 # code signing can be added later without changing the flow.
@@ -42,29 +42,29 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           choco install innosetup -y --no-progress
-          iscc scripts/shieldai.iss
+          iscc scripts/guardianai.iss
       - name: Name artifacts per-OS
-        # all three jobs built 'dist/shieldai*' - uploading the same
+        # all three jobs built 'dist/guardianai*' - uploading the same
         # filename to one release means last-writer-wins and a platform
         # silently disappears (proven by the first real run: only one
-        # 'shieldai' asset existed). Rename before publish.
+        # 'shieldai' asset existed, pre-rename). Rename before publish.
         shell: bash
         run: |
           cd dist
           case "$RUNNER_OS" in
-            Windows) mv shieldai.exe shieldai-windows.exe
+            Windows) mv guardianai.exe guardianai-windows.exe
                      mv SHA256SUMS.txt SHA256SUMS-windows.txt ;;
-            macOS)   mv shieldai shieldai-macos
+            macOS)   mv guardianai guardianai-macos
                      mv SHA256SUMS.txt SHA256SUMS-macos.txt ;;
-            Linux)   mv shieldai shieldai-linux
+            Linux)   mv guardianai guardianai-linux
                      mv SHA256SUMS.txt SHA256SUMS-linux.txt ;;
           esac
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/shieldai-*
-            dist/ShieldAI-Setup-*.exe
+            dist/guardianai-*
+            dist/GuardianAI-Setup-*.exe
             dist/SHA256SUMS-*.txt
             dist/sbom.cyclonedx.json
           generate_release_notes: true

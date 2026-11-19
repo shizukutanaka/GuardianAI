@@ -6,6 +6,18 @@ All notable changes to GuardianAI. Format follows
 
 ## [Unreleased]
 
+### Changed
+- One name: the command, artifacts and settings are now GuardianAI -
+  `guardianai` CLI / `guardianai@>` prompt, `dist/guardianai.pyz`,
+  `guardianai-<os>` binaries, `GuardianAI-Setup-<ver>.exe`
+  (`scripts/guardianai.iss`), `GUARDIANAI_*` env vars,
+  `%LOCALAPPDATA%\GuardianAI` / `~/.guardianai`, `guardianai.license`,
+  SBOM component and license product `GuardianAI`. ShieldAI installs
+  need no action: `SHIELDAI_*` env vars, an existing ShieldAI data
+  dir, `shieldai.license` and product="ShieldAI" licenses are read as
+  fallbacks, and the installer keeps `AppId=ShieldAI` so it upgrades
+  in place.
+
 ### Added
 - MCP (Model Context Protocol) stdio server: `shieldai mcp`
   (`guardian_ai/mcp_server.py`, stdlib-only JSON-RPC - no new

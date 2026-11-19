@@ -243,7 +243,7 @@ import json, tempfile, threading, urllib.request, os
 def test():
     # env before imports so DB_PATH resolves to the temp dir
     td = tempfile.mkdtemp()
-    os.environ['SHIELDAI_DATA_DIR'] = td
+    os.environ['GUARDIANAI_DATA_DIR'] = td
     from guardian_ai.webui import serve
     # start on an ephemeral port (port 0 -> OS assigns)
     from http.server import ThreadingHTTPServer
@@ -282,6 +282,71 @@ def test():
     r = json.loads(urllib.request.urlopen(req, timeout=30).read())  # nosec B310 - localhost test server
     assert r['agent'] == 'it' and 'entry_id' in r
     srv.shutdown()
+""" + FOOTER,
+
+    "naming": HEADER + """
+import os, sys, tempfile
+from pathlib import Path
+def test():
+    from guardian_ai import paths, licensing
+    saved = {k: os.environ.pop(k, None) for k in (
+        'GUARDIANAI_DATA_DIR', 'SHIELDAI_DATA_DIR', 'LOCALAPPDATA')}
+    try:
+        a, b = tempfile.mkdtemp(), tempfile.mkdtemp()
+        # pre-rename installs: the legacy env var alone still works
+        os.environ['SHIELDAI_DATA_DIR'] = a
+        assert paths.data_dir() == Path(a)
+        # the new name wins when both are set
+        os.environ['GUARDIANAI_DATA_DIR'] = b
+        assert paths.data_dir() == Path(b)
+        del os.environ['GUARDIANAI_DATA_DIR'], os.environ['SHIELDAI_DATA_DIR']
+        # frozen exe: an existing ShieldAI dir is used in place (moving
+        # it would orphan the keys); a fresh machine gets GuardianAI
+        base = Path(tempfile.mkdtemp())
+        os.environ['LOCALAPPDATA'] = str(base)
+        sys.frozen = True
+        try:
+            assert paths.data_dir() == base / 'GuardianAI'
+            base2 = Path(tempfile.mkdtemp())
+            (base2 / 'ShieldAI').mkdir()
+            os.environ['LOCALAPPDATA'] = str(base2)
+            assert paths.data_dir() == base2 / 'ShieldAI'
+        finally:
+            del sys.frozen
+    finally:
+        for k, v in saved.items():
+            os.environ.pop(k, None)
+            if v is not None:
+                os.environ[k] = v
+    # licenses signed as ShieldAI stay valid; other products don't
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives import serialization
+    import base64, json
+    priv = Ed25519PrivateKey.generate()
+    old = licensing.PUBLIC_KEY_B64
+    licensing.PUBLIC_KEY_B64 = base64.b64encode(priv.public_key().public_bytes(
+        serialization.Encoding.Raw, serialization.PublicFormat.Raw)).decode()
+    try:
+        def lic(product):
+            body = {'product': product, 'licensee': 't', 'seats': 1,
+                    'expires': None, 'features': []}
+            f = Path(tempfile.mkdtemp()) / 'x.license'
+            f.write_text(json.dumps({'license': body, 'signature':
+                base64.b64encode(priv.sign(licensing._canonical(body))).decode()}))
+            return licensing.verify_license(f)['valid']
+        assert lic('GuardianAI') and lic('ShieldAI') and not lic('Other')
+    finally:
+        licensing.PUBLIC_KEY_B64 = old
+    # one name on the user-facing surface: no new ShieldAI strings in the
+    # CLI, the dashboard or the README beyond the documented compat note
+    root = Path(__file__).resolve().parents[2]
+    for rel in ('src/main.py', 'src/guardian_ai/webui.py', 'README.md'):
+        compat = False
+        for n, line in enumerate((root / rel).read_text('utf-8').splitlines(), 1):
+            if line.startswith('## '):
+                compat = line == '## Renamed from ShieldAI'
+            low = line.lower().replace('img.shields.io', '').replace('shield_ai.db', '')
+            assert 'shield' not in low or compat, (rel, n, line)
 """ + FOOTER,
 
     "mcp": HEADER + """

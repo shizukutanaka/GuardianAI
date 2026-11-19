@@ -2,9 +2,9 @@
 """GuardianAI deployment script.
 
   --test    run the full test suite (gate for --deploy)
-  --deploy  build dist/shieldai.pyz - a single-file zipapp of src/.
+  --deploy  build dist/guardianai.pyz - a single-file zipapp of src/.
             Local-first: no PyPI, no twine, no cloud. Run it with
-            `python dist/shieldai.pyz`.
+            `python dist/guardianai.pyz`.
   --deploy --exe build the pyz then the Windows exe (scripts/build_exe.py)
 """
 import subprocess
@@ -36,11 +36,11 @@ def build() -> bool:
     sys.path.insert(0, str(SRC))
     from guardian_ai import __version__
     # versioned artifact (like the exe/installer naming) + a
-    # shieldai.pyz copy so `python dist/shieldai.pyz` still works.
-    target = DIST / f"shieldai-{__version__}.pyz"
+    # guardianai.pyz copy so `python dist/guardianai.pyz` still works.
+    target = DIST / f"guardianai-{__version__}.pyz"
     zipapp.create_archive(SRC, target=str(target), main="main:main",
                           filter=_zipapp_filter, compressed=True)
-    simple = DIST / "shieldai.pyz"
+    simple = DIST / "guardianai.pyz"
     shutil.copy2(target, simple)
     print(f"[OK] built {target} ({target.stat().st_size} bytes)")
     print(f"     run: {sys.executable} {simple}")

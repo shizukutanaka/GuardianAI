@@ -2,8 +2,8 @@
 
 Resolution order for a service key (all storage stays on this machine):
 
-  1. Environment variable SHIELDAI_KEY_<SERVICE> (base64 or hex, 32 bytes)
-     or the shared SHIELDAI_KEY.
+  1. Environment variable GUARDIANAI_KEY_<SERVICE> (base64 or hex, 32 bytes)
+     or the shared GUARDIANAI_KEY (legacy SHIELDAI_KEY* names still work).
   2. Windows DPAPI-protected key file under .shield_keys/ (per-user,
      no master password needed; the blob is useless on another machine
      or another user account).
@@ -18,7 +18,7 @@ import secrets
 from pathlib import Path
 from typing import Optional
 
-from guardian_ai.paths import data_dir
+from guardian_ai.paths import data_dir, env
 
 _KEY_BYTES = 32
 
@@ -28,8 +28,8 @@ def _key_dir() -> Path:
 
 
 def _env_key(service_name: str) -> Optional[bytes]:
-    for var in (f"SHIELDAI_KEY_{service_name.upper()}", "SHIELDAI_KEY"):
-        raw = os.environ.get(var)
+    for var in (f"KEY_{service_name.upper()}", "KEY"):
+        raw = env(var)
         if not raw:
             continue
         try:

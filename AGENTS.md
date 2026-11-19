@@ -28,25 +28,25 @@ Ollama synthesis (labelled "未検証") -> redact -> HMAC audit chain.
   commands (they are NOT analyzed as requests).
 - Tests: `venv/Scripts/python src/test_auto.py` (generates
   src/test_files/test_*.py, then executes each).
-- zipapp: `venv/Scripts/python deploy.py --deploy` -> dist/shieldai.pyz
+- zipapp: `venv/Scripts/python deploy.py --deploy` -> dist/guardianai.pyz
 - standalone exe (no Python on target): `venv/Scripts/python
-  scripts/build_exe.py` -> dist/shieldai.exe + SHA256SUMS.txt.
+  scripts/build_exe.py` -> dist/guardianai.exe + SHA256SUMS.txt.
   Frozen exe with no args launches `ui` (product behaviour); data dir
-  moves to %LOCALAPPDATA%\ShieldAI (temp extraction dirs get wiped).
+  moves to %LOCALAPPDATA%\GuardianAI (temp extraction dirs get wiped).
 - SBOM: `venv/Scripts/python scripts/gen_sbom.py` ->
   dist/sbom.cyclonedx.json (CycloneDX 1.5).
 - Release: `git tag v*` -> `.github/workflows/release.yml` runs tests,
   builds exe+SBOM+sums on windows/macos/ubuntu, Inno Setup installer on
-  Windows (`scripts/shieldai.iss`), attaches all to a GitHub Release.
+  Windows (`scripts/guardianai.iss`), attaches all to a GitHub Release.
 - Licenses: `scripts/license_keygen.py init|sign` - Ed25519 vendor key
   lives in gitignored `.vendor/` (never commit it).
 
 ## CLI commands
-The authoritative list is `shieldai help` / `--help` - DO NOT hardcode
+The authoritative list is `guardianai help` / `--help` - DO NOT hardcode
 it here (this list went stale twice when features landed). Notes:
-- `--lang ja|en` localizes banner/help/warnings (SHIELDAI_LANG env,
+- `--lang ja|en` localizes banner/help/warnings (GUARDIANAI_LANG env,
   '--lang', config.json, or OS locale in that order - `config lang xx`
-  persists it); `shieldai ui` without an arg opens the dashboard in
+  persists it); `guardianai ui` without an arg opens the dashboard in
   the persisted locale; `--json` on every command (including
   `verify <file> --json`)
 - `mcp` (one-shot only) runs the MCP stdio server
@@ -56,7 +56,7 @@ it here (this list went stale twice when features landed). Notes:
   (classify/scan/redact/audit-integrity/list-agents); the Executor,
   file paths, config writes and update are deliberately unreachable.
 - `config` persists user prefs to data_dir/config.json - `lang <ja|en>`
-  and `no_network <on|off>` (env SHIELDAI_NO_NETWORK is the other source)
+  and `no_network <on|off>` (env GUARDIANAI_NO_NETWORK is the other source)
 - the Ollama host is deliberately hardcoded to localhost - making it
   configurable would break the '100% offline' claim (LLM calls would
   leave the machine)
@@ -64,7 +64,7 @@ it here (this list went stale twice when features landed). Notes:
   persisted 'preferred model' would override that heuristic and cause
   stalls, so `config ollama_model` is deliberately NOT offered
 - `config data_dir` is deliberately NOT offered - the KMS keys and DB
-  already live in SHIELDAI_DATA_DIR; changing it would orphan them
+  already live in GUARDIANAI_DATA_DIR; changing it would orphan them
 - `restore` is deliberately manual (file copy over the live DB) - a
   command that overwrites the audit trail is too dangerous to make
   one-line
@@ -77,14 +77,15 @@ it here (this list went stale twice when features landed). Notes:
   (shared with GET /api/doctor)
 
 ## Environment quirks
-- SHIELDAI_DATA_DIR=D:\shieldai-data (setx'd) holds DB + KMS keys +
+- SHIELDAI_DATA_DIR=D:\shieldai-data (setx'd, pre-rename name - still
+  read as the fallback for GUARDIANAI_DATA_DIR) holds DB + KMS keys +
   crash.log + shieldai.license + ui_url.txt + config.json.
 - Ollama portable at D:\ollama; start with `start-ollama.cmd`.
 - GPU: RTX A2000 12GB; inference ~6s; deterministic mode works w/o GPU.
 - venv is a 32-bit Python - if cryptography's _rust DLL breaks,
   force-reinstall: `venv/Scripts/python -m pip install
   --force-reinstall --no-cache-dir "cryptography>=41,<46"`.
-- SHIELDAI_NO_NETWORK=1 closes the only outbound call (update/report/
+- GUARDIANAI_NO_NETWORK=1 closes the only outbound call (update/report/
   /api/update) - hard-cut for air-gapped installs.
 - PyInstaller 64-bit bootloader can be missing after a C: disk-full
   partial install - repair by extracting it from the wheel into
@@ -92,6 +93,13 @@ it here (this list went stale twice when features landed). Notes:
 - D:\pyi-tmp has an irremovable empty dir (FS quirk - harmless).
 
 ## Conventions
+- Name: the product is GuardianAI (command `guardianai`, env
+  `GUARDIANAI_*`). Pre-rename ShieldAI installs keep working: `SHIELDAI_*`
+  env vars, the ShieldAI/.shieldai data dir, shieldai.license and
+  product="ShieldAI" licenses are read as fallbacks (guardian_ai/paths.py,
+  licensing.py). Storage names (`shield_ai.db`, `.shield_keys/`,
+  `shieldai.key`) are deliberately kept - renaming orphans the audit
+  chain and keys. Don't add new ShieldAI strings (test_naming).
 - Never fabricate: unknowns report verified/unverified/needs_human.
 - Secrets are redacted before audit_log (delete > encrypt).
 - Broken/forged data is never silently touched: every read/write path

@@ -43,7 +43,7 @@ and can be hard-disabled via the `no_network` setting).
 
 ## Usage examples
 
-Type a request at the `shieldai@>` prompt — keywords pick the agent
+Type a request at the `guardianai@>` prompt — keywords pick the agent
 automatically (Japanese or English):
 
 ```
@@ -73,9 +73,9 @@ venv/Scripts/python src/main.py   # Windows (or: python src/main.py after activa
 venv/Scripts/python src/test_auto.py
 
 # Deploy: build a single-file zipapp (stdlib-only, no cloud)
-venv/Scripts/python deploy.py --deploy   # -> dist/shieldai.pyz
+venv/Scripts/python deploy.py --deploy   # -> dist/guardianai.pyz
 # or a standalone exe (no Python needed on the target machine):
-venv/Scripts/python scripts/build_exe.py # -> dist/shieldai.exe + SHA256SUMS.txt
+venv/Scripts/python scripts/build_exe.py # -> dist/guardianai.exe + SHA256SUMS.txt
 
 # CLI commands inside main.py (also one-shot: `python src/main.py <command>`):
 #   history [N], tasks, status, verify, forged, export, backup,
@@ -88,9 +88,18 @@ venv/Scripts/python scripts/build_exe.py # -> dist/shieldai.exe + SHA256SUMS.txt
 python -c "import sqlite3; conn=sqlite3.connect('src/guardian_ai/shield_ai.db'); c=conn.cursor(); c.execute('SELECT COUNT(*) FROM audit_logs'); print('audit_logs:', c.fetchone()[0]); c.execute('PRAGMA integrity_check'); print('integrity:', c.fetchone()[0])"
 ```
 
+## Renamed from ShieldAI
+
+GuardianAI was previously shipped as **ShieldAI** (`shieldai` command,
+`SHIELDAI_*` env vars, v1.0.0-rc1 release assets). Existing installs keep
+working without changes: `SHIELDAI_*` env vars are still read when the
+`GUARDIANAI_*` one is unset, an existing `%LOCALAPPDATA%\ShieldAI` /
+`~/.shieldai` data dir is used in place, and licenses issued as
+`shieldai.license` / product `ShieldAI` stay valid.
+
 ## MCP server (for AI agents)
 
-`shieldai mcp` runs a Model Context Protocol server over stdio, so an
+`guardianai mcp` runs a Model Context Protocol server over stdio, so an
 AI agent (Claude Desktop, Claude Code, ...) can call GuardianAI's
 read-only core as tools. It is stdlib-only (no `mcp` package needed)
 and fully local - no network code, nothing leaves the machine.
