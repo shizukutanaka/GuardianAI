@@ -64,7 +64,7 @@ Success rate: 100.0%
 # GitHub Secrets 設定
 # - GITHUB_TOKEN (自動生成される)
 # - GITHUB_OWNER (your-org)
-# - GITHUB_REPO (shieldai)
+# - GITHUB_REPO (GuardianAI)
 ```
 
 ### 本番デプロイ

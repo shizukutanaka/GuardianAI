@@ -1,20 +1,20 @@
 name: Bug report
-description: Report something that doesn't work - `shieldai diag` output is the fastest context
+description: Report something that doesn't work - `guardianai diag` output is the fastest context
 title: "bug: "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Run `shieldai diag` and paste its output - it has everything
+        Run `guardianai diag` and paste its output - it has everything
         needed to reproduce most problems.
-        For crashes, `shieldai report` opens this form pre-filled.
+        For crashes, `guardianai report` opens this form pre-filled.
   - type: textarea
     id: diag
     attributes:
       label: Diag output
-      description: Output of `shieldai diag` (version, OS, python, data_dir, last crash)
-      placeholder: paste `shieldai diag` output here
+      description: Output of `guardianai diag` (version, OS, python, data_dir, last crash)
+      placeholder: paste `guardianai diag` output here
     validations:
       required: true
   - type: textarea
@@ -29,5 +29,5 @@ body:
     attributes:
       label: Already tried
       options:
-        - label: Ran `shieldai doctor` (environment self-check)
-        - label: Ran `shieldai verify` (audit chain check)
+        - label: Ran `guardianai doctor` (environment self-check)
+        - label: Ran `guardianai verify` (audit chain check)

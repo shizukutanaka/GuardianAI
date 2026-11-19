@@ -11,7 +11,7 @@ vulnerability") or open an issue marked `[security]` with minimal
 detail and we will follow up privately. The RFC 9116 contact file is
 [`.well-known/security.txt`](.well-known/security.txt).
 
-Include: version (`shieldai version`), OS, whether the binary is frozen
+Include: version (`guardianai version`), OS, whether the binary is frozen
 (exe) or run from source, and a minimal reproduction.
 
 ## What counts

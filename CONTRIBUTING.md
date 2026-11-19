@@ -38,7 +38,7 @@ claim: **claims must match behavior**.
 - `src/main.py` - CLI entry (REPL + one-shot argv)
 - `src/test_auto.py` - test generator + runner
 - `scripts/` - build_exe.py, gen_sbom.py, license_keygen.py,
-  shieldai.iss (installer)
+  guardianai.iss (installer)
 
 ## I18n
 

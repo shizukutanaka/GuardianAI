@@ -15,7 +15,7 @@ cryptography>=41,<46
 #   llama-cpp-python>=0.2.0   # in-process LLM (needs C++ toolchain)
 #   numpy>=1.24.0             # vector/embedding work
 #
-# NOT needed: the MCP server (guardian_ai/mcp_server.py, `shieldai
+# NOT needed: the MCP server (guardian_ai/mcp_server.py, `guardianai
 # mcp`) speaks newline-delimited JSON-RPC over stdio with the stdlib
 # alone - no mcp package.
 #

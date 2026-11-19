@@ -6,7 +6,7 @@ name: guardian-ai
 description: Use for 100% local enterprise AI agents with zero external data.
 ---
 
-## Guardian AI - Privacy-First Enterprise Agent Platform
+## GuardianAI - Privacy-First Enterprise Agent Platform
 
 ### Architecture
 

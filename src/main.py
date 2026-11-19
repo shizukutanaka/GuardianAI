@@ -13,7 +13,7 @@ from guardian_ai.executor import Executor
 from guardian_ai.router import Router
 
 # i18n: the CLI mirrors the web UI - banner/help live in a JA/EN dict,
-# language resolves SHIELDAI_LANG -> --lang xx -> OS locale -> 'en'.
+# language resolves GUARDIANAI_LANG -> --lang xx -> OS locale -> 'en'.
 _CLI_STR = {
     "en": {"banner": """
 ==================================================
@@ -145,7 +145,7 @@ _CLI_STR["en"]["help"] = """Commands:
   config [lang <ja|en>] show/persist preferences (data_dir/config.json)
   mcp           MCP stdio server for AI agents (read-only tools:
                 classify / scan / redact / audit integrity; one-shot
-                only - run `shieldai mcp`, not inside the REPL)
+                only - run `guardianai mcp`, not inside the REPL)
   help          show this message
   quit          exit
 """
@@ -177,15 +177,16 @@ _CLI_STR["ja"]["help"] = """コマンド:
                 (http://127.0.0.1:8765)
   mcp           AI エージェント向け MCP stdio サーバー (読み取り専用
                 ツール: 分類 / 機密検出 / 伏字化 / 監査整合性。
-                ワンショット専用 - `shieldai mcp` で起動、REPL 内不可)
+                ワンショット専用 - `guardianai mcp` で起動、REPL 内不可)
   help          このメッセージを表示
   quit          終了
 """
 
 
 def _cli_lang(argv) -> str:
-    """SHIELDAI_LANG env -> '--lang xx' -> config.json -> OS locale."""
-    lang = os.environ.get("SHIELDAI_LANG", "")
+    """GUARDIANAI_LANG env -> '--lang xx' -> config.json -> OS locale."""
+    from guardian_ai.paths import env
+    lang = env("LANG")
     if "--lang" in argv:
         i = argv.index("--lang")
         if i + 1 < len(argv):
@@ -221,7 +222,8 @@ def _write_config(**kv) -> None:
 
 def _is_no_network() -> bool:
     """env var OR persisted config - either can air-gap the install."""
-    if os.environ.get("SHIELDAI_NO_NETWORK"):
+    from guardian_ai.paths import env
+    if env("NO_NETWORK"):
         return True
     try:
         import json as _json
@@ -326,7 +328,7 @@ def main() -> None:
     router = Router()
     executor = Executor()
     conn = init_database()
-    # 'shieldai <command>' runs one command and exits - the --json
+    # 'guardianai <command>' runs one command and exits - the --json
     # surface is only scriptable when argv reaches it (piping the REPL
     # also works but is ugly). No argv -> interactive REPL as before.
     # Exception: a frozen exe with no args is the PRODUCT - a customer
@@ -334,7 +336,7 @@ def main() -> None:
     argv = sys.argv[1:]
     lang = _cli_lang(argv)
     # '--lang xx' is a global flag, not part of the command - strip the
-    # pair so 'shieldai --lang ja status' runs 'status'.
+    # pair so 'guardianai --lang ja status' runs 'status'.
     if "--lang" in argv:
         i = argv.index("--lang")
         argv = argv[:i] + argv[i + 2:]
@@ -367,7 +369,7 @@ def main() -> None:
         while True:
             try:
                 user_input = (next(fed) if fed is not None
-                              else input("shieldai@> ")).strip()
+                              else input("guardianai@> ")).strip()
             except (KeyboardInterrupt, EOFError, StopIteration):
                 if not one_shot:
                     print()
@@ -586,7 +588,7 @@ def main() -> None:
                 # auto-send - gather diag, open a pre-filled GitHub issue
                 # in the browser (or emit the body as JSON for headless),
                 # the USER reviews and submits.
-                # SHIELDAI_NO_NETWORK closes this too.
+                # GUARDIANAI_NO_NETWORK closes this too.
                 import json as _json
                 if _is_no_network():
                     print(_json.dumps({"error": "outbound calls disabled "
@@ -659,7 +661,7 @@ def main() -> None:
                 # only, sends nothing. Auto-update is deliberately NOT
                 # built - without signature verification it would be a
                 # downgrade/spoofing channel (fail-closed by design).
-                # SHIELDAI_NO_NETWORK hard-cuts it for air-gapped sites.
+                # GUARDIANAI_NO_NETWORK hard-cuts it for air-gapped sites.
                 import json as _json
                 if _is_no_network():
                     msg = "outbound calls disabled (no_network)"
@@ -678,7 +680,7 @@ def main() -> None:
                     req = urllib.request.Request(
                         "https://api.github.com/repos/shizukutanaka/"
                         "GuardianAI/releases/latest",
-                        headers={"User-Agent": "shieldai-update-check",
+                        headers={"User-Agent": "guardianai-update-check",
                                  "Accept": "application/vnd.github+json"})
                     rel = _json.loads(
                         urllib.request.urlopen(req, timeout=10).read())  # nosec B310 - hardcoded https GitHub API URL

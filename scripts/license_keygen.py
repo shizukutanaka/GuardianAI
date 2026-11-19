@@ -11,7 +11,8 @@ Usage:
                          [--features a,b,c] [--out FILE]
 
 The private key lives in the repo-local .vendor/ dir (default
-%SHIELDAI_VENDOR_KEY% or <repo>/.vendor/ed25519.key). If it leaks,
+%GUARDIANAI_VENDOR_KEY% - legacy %SHIELDAI_VENDOR_KEY% - or
+<repo>/.vendor/ed25519.key). If it leaks,
 anyone can forge licenses - treat it like a CA key.
 """
 import argparse
@@ -26,7 +27,8 @@ ROOT = Path(__file__).parent.parent.resolve()
 
 
 def _key_path() -> Path:
-    env = os.environ.get("SHIELDAI_VENDOR_KEY")
+    env = (os.environ.get("GUARDIANAI_VENDOR_KEY")
+           or os.environ.get("SHIELDAI_VENDOR_KEY"))
     if env:
         return Path(env)
     return ROOT / ".vendor" / "ed25519.key"
@@ -69,7 +71,7 @@ def cmd_sign(args) -> int:
         print(f"no private key at {kp} - run 'init' first")
         return 1
     priv = Ed25519PrivateKey.from_private_bytes(kp.read_bytes())
-    lic = {"product": "ShieldAI",
+    lic = {"product": "GuardianAI",
            "licensee": args.licensee,
            "seats": args.seats,
            "issued": datetime.now(timezone.utc).isoformat(),
@@ -77,7 +79,7 @@ def cmd_sign(args) -> int:
            "features": args.features.split(",") if args.features else []}
     sig = base64.b64encode(priv.sign(_canonical(lic))).decode()
     doc = {"license": lic, "signature": sig}
-    out = Path(args.out or f"shieldai-{args.licensee}.license")
+    out = Path(args.out or f"guardianai-{args.licensee}.license")
     out.write_text(json.dumps(doc, indent=2), encoding="utf-8")
     print(f"[OK] signed license: {out}")
     print(f"     deliver to customer; they place it in their data dir")

@@ -3,7 +3,7 @@
 
 Commercial/government buyers increasingly require an SBOM - EO 14028
 (US federal procurement) and the EU Cyber Resilience Act both move it
-toward mandatory. ShieldAI ships exactly one runtime dependency
+toward mandatory. GuardianAI ships exactly one runtime dependency
 (cryptography), so a hand-maintained manifest stays honest and cheap
 instead of a full lockfile scanner. The script still READS the installed
 versions - it never hardcodes them, so the SBOM can't drift from reality.
@@ -48,15 +48,15 @@ def main() -> int:
         "version": 1,
         "metadata": {
             "component": {"type": "application",
-                          "name": "ShieldAI",
-                          "bom-ref": "pkg:generic/shieldai",
+                          "name": "GuardianAI",
+                          "bom-ref": "pkg:generic/guardianai",
                           "version": app_ver},
-            "tools": [{"vendor": "ShieldAI",
+            "tools": [{"vendor": "GuardianAI",
                        "name": "gen_sbom.py"}],
         },
         "components": components,
         "dependencies": [{
-            "ref": "pkg:generic/shieldai",
+            "ref": "pkg:generic/guardianai",
             "dependsOn": [c["bom-ref"] for c in components],
         }],
     }
