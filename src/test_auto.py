@@ -277,6 +277,55 @@ def test():
     assert not os.path.exists(backup_path2)
 """ + FOOTER,
 
+    "kms": HEADER + """
+def test():
+    import tempfile
+    from pathlib import Path
+    names = ('GUARDIANAI_KEY_AUDIT_CHAIN', 'SHIELDAI_KEY_AUDIT_CHAIN',
+             'GUARDIANAI_KEY', 'SHIELDAI_KEY', 'GUARDIANAI_DATA_DIR')
+    saved = {k: os.environ.pop(k, None) for k in names}
+    try:
+        from guardian_ai import kms
+
+        with tempfile.TemporaryDirectory() as td:
+            os.environ['GUARDIANAI_DATA_DIR'] = td
+            key_dir = Path(td) / '.shield_keys'
+            key_dir.mkdir()
+            key_path = key_dir / 'audit_chain.key'
+            backup_path = key_dir / 'audit_chain.key.backup'
+            corrupt = b'corrupt key material'
+            key_path.write_bytes(corrupt)
+            key = kms.get_key('audit_chain')
+            assert len(key) == 32
+            assert backup_path.read_bytes() == corrupt
+            blob = key_path.read_bytes()
+            if os.name == 'nt':
+                assert kms._dpapi(blob, protect=False) == key
+            else:
+                assert len(blob) == 32
+                assert blob == key
+            assert kms.get_key('audit_chain') == key
+
+        with tempfile.TemporaryDirectory() as td:
+            os.environ['GUARDIANAI_DATA_DIR'] = td
+            key_dir = Path(td) / '.shield_keys'
+            key_path = key_dir / 'audit_chain.key'
+            backup_path = key_dir / 'audit_chain.key.backup'
+            valid = b'V' * 32
+            if os.name == 'nt':
+                kms._write_key_file(key_path, valid)
+            else:
+                key_dir.mkdir()
+                key_path.write_bytes(valid)
+            assert kms.get_key('audit_chain') == valid
+            assert not backup_path.exists()
+    finally:
+        os.environ.pop('GUARDIANAI_DATA_DIR', None)
+        for k, v in saved.items():
+            if v is not None:
+                os.environ[k] = v
+""" + FOOTER,
+
     "webui": HEADER + """
 import json, tempfile, threading, urllib.request, os
 def test():
