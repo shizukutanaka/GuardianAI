@@ -238,6 +238,45 @@ def test():
     importlib.reload(main)
 """ + FOOTER,
 
+    "config": HEADER + """
+def test():
+    # env before importing main - config resolution must use this
+    # isolated data dir, never the developer's real one.
+    import importlib, json, tempfile
+    td = tempfile.mkdtemp()
+    os.environ['GUARDIANAI_DATA_DIR'] = td
+    import main
+    importlib.reload(main)
+
+    corrupt = b'{not json'
+    cfg_path = os.path.join(td, 'config.json')
+    backup_path = os.path.join(td, 'config.json.backup')
+    with open(cfg_path, 'wb') as f:
+        f.write(corrupt)
+    main._write_config(lang='ja')
+    assert os.path.exists(backup_path)
+    with open(backup_path, 'rb') as f:
+        assert f.read() == corrupt
+    with open(cfg_path, encoding='utf-8') as f:
+        cfg = json.load(f)
+    assert cfg['lang'] == 'ja'
+
+    # A valid config is merged in place - no backup means no spurious
+    # evidence-loss artifact when nothing was corrupt.
+    td2 = tempfile.mkdtemp()
+    os.environ['GUARDIANAI_DATA_DIR'] = td2
+    cfg_path2 = os.path.join(td2, 'config.json')
+    backup_path2 = os.path.join(td2, 'config.json.backup')
+    with open(cfg_path2, 'w', encoding='utf-8') as f:
+        f.write('{"no_network": "on"}')
+    main._write_config(lang='en')
+    with open(cfg_path2, encoding='utf-8') as f:
+        cfg2 = json.load(f)
+    assert cfg2['no_network'] == 'on'
+    assert cfg2['lang'] == 'en'
+    assert not os.path.exists(backup_path2)
+""" + FOOTER,
+
     "webui": HEADER + """
 import json, tempfile, threading, urllib.request, os
 def test():
