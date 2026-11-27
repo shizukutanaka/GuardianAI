@@ -326,6 +326,31 @@ def test():
                 os.environ[k] = v
 """ + FOOTER,
 
+    "webui_error_log": HEADER + """
+def test():
+    import tempfile
+    from pathlib import Path
+    saved = os.environ.get('GUARDIANAI_DATA_DIR')
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            os.environ['GUARDIANAI_DATA_DIR'] = td
+            from guardian_ai.webui import _log_error
+            log = Path(td) / 'webui-errors.log'
+            log.write_bytes(b'old entry' + bytes([10, 0xff, 0xfe, 10]))
+            _log_error('first new error')
+            text = log.read_text(encoding='utf-8')
+            assert 'first new error' in text
+            _log_error('second new error')
+            text = log.read_text(encoding='utf-8')
+            assert 'first new error' in text
+            assert 'second new error' in text
+    finally:
+        if saved is None:
+            os.environ.pop('GUARDIANAI_DATA_DIR', None)
+        else:
+            os.environ['GUARDIANAI_DATA_DIR'] = saved
+""" + FOOTER,
+
     "webui": HEADER + """
 import json, tempfile, threading, urllib.request, os
 def test():

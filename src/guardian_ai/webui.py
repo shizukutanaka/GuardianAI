@@ -83,7 +83,7 @@ def _log_error(msg: str) -> None:
         log = data_dir() / "webui-errors.log"
         lines = []
         if log.exists():
-            lines = log.read_text(encoding="utf-8").splitlines()[-199:]
+            lines = log.read_text(encoding="utf-8", errors="replace").splitlines()[-199:]
         lines.append(f"{datetime.now():%Y-%m-%d %H:%M:%S} {msg}")
         log.write_text("\n".join(lines) + "\n", encoding="utf-8")
     except Exception:
