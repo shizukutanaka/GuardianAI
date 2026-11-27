@@ -109,6 +109,18 @@ def get_key(service_name: str) -> bytes:
     path = _key_dir() / f"{safe_name}.key"
     key = _read_key_file(path)
     if key is None:
+        # Losing the old key permanently destroys access to encrypted
+        # audit exports and HMAC validation of chain_state. Preserve the
+        # unreadable bytes once before replacing them; best effort only.
+        try:
+            if path.exists():
+                import shutil
+                backup = path.with_name(path.name + ".backup")
+                shutil.copyfile(path, backup)
+                if os.name != "nt":
+                    os.chmod(backup, 0o600)
+        except Exception:
+            pass
         key = secrets.token_bytes(_KEY_BYTES)
         try:
             _write_key_file(path, key)
