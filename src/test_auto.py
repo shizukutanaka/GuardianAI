@@ -351,6 +351,25 @@ def test():
             os.environ['GUARDIANAI_DATA_DIR'] = saved
 """ + FOOTER,
 
+    "crash_log": HEADER + """
+def test():
+    import tempfile
+    from pathlib import Path
+    with tempfile.TemporaryDirectory() as td:
+        crash = Path(td) / 'crash.log'
+        crash.write_bytes(b'original failure' + bytes([10, 0xff, 0xfe, 10])
+                          + b'final traceback line' + bytes([10]))
+        diag_text = crash.read_text(encoding='utf-8', errors='replace')[-2000:]
+        report_text = crash.read_text(encoding='utf-8', errors='replace')[-1500:]
+        for text in (diag_text, report_text):
+            assert chr(0xfffd) in text
+            assert text.rstrip().endswith('final traceback line')
+    main_py = Path(__file__).resolve().parents[1] / 'main.py'
+    src = main_py.read_text(encoding='utf-8')
+    assert 'encoding="utf-8", errors="replace")[-2000:]' in src
+    assert 'encoding="utf-8", errors="replace")[-1500:]' in src
+""" + FOOTER,
+
     "webui": HEADER + """
 import json, tempfile, threading, urllib.request, os
 def test():

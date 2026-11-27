@@ -568,7 +568,7 @@ def main() -> None:
                         "frozen": bool(getattr(sys, "frozen", False)),
                         "data_dir": str(data_dir()),
                         "last_crash": (crash.read_text(
-                            encoding="utf-8")[-2000:]
+                            encoding="utf-8", errors="replace")[-2000:]
                             if crash.exists() else None)}
                 if cmd.endswith("--json"):
                     print(_json.dumps(info, ensure_ascii=False))
@@ -616,7 +616,7 @@ def main() -> None:
                 from guardian_ai.paths import data_dir
                 crash = data_dir() / "crash.log"
                 crash_txt = (crash.read_text(
-                    encoding="utf-8")[-1500:]
+                    encoding="utf-8", errors="replace")[-1500:]
                     if crash.exists() else "(none)")
                 body = (f"## diag\n"
                         f"- version: {__version__}\n"
