@@ -210,13 +210,26 @@ def _write_config(**kv) -> None:
     """Persist user preferences to data_dir/config.json."""
     import json as _json
     from guardian_ai.paths import data_dir
+    cfg_path = data_dir() / "config.json"
     try:
-        cfg = _json.loads(
-            (data_dir() / "config.json").read_text("utf-8"))
+        cfg = _json.loads(cfg_path.read_text("utf-8"))
+        if not isinstance(cfg, dict):
+            raise ValueError("config.json is not a JSON object")
     except Exception:
         cfg = {}
+        # A corrupt config may still contain the user's settings in
+        # recoverable form and is evidence of disk/tamper damage - keep
+        # one raw copy before replacing it. Best effort only: a failed
+        # backup must not block the preference write itself.
+        try:
+            if cfg_path.exists():
+                import shutil
+                shutil.copyfile(
+                    cfg_path, cfg_path.parent / "config.json.backup")
+        except Exception:
+            pass
     cfg.update(kv)
-    (data_dir() / "config.json").write_text(
+    cfg_path.write_text(
         _json.dumps(cfg, ensure_ascii=False, indent=2), "utf-8")
 
 
