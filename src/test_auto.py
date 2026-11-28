@@ -244,6 +244,33 @@ def test():
         conn.close()
 """ + FOOTER,
 
+    "backup_collision": HEADER + """
+def test():
+    import os, sqlite3, tempfile
+    from guardian_ai.db import init_database, audit_log, backup_database
+    with tempfile.TemporaryDirectory() as td:
+        conn = init_database(os.path.join(td, 't.db'))
+        audit_log(conn, 'general', 'backup collision first', 'result one')
+        first = backup_database(conn, out_dir=td)
+        audit_log(conn, 'general', 'backup collision second', 'result two')
+        second = backup_database(conn, out_dir=td)
+        assert first != second
+        assert os.path.exists(first)
+        assert os.path.exists(second)
+
+        def requests(path):
+            snap = sqlite3.connect(path)
+            try:
+                return [r[0] for r in snap.execute(
+                    'SELECT request FROM audit_logs ORDER BY id')]
+            finally:
+                snap.close()
+        assert requests(first) == ['backup collision first']
+        assert requests(second) == ['backup collision first',
+                                    'backup collision second']
+        conn.close()
+""" + FOOTER,
+
     "compliance": HEADER + """
 def test():
     from guardian_ai.compliance import check_compliance, audit_integrity

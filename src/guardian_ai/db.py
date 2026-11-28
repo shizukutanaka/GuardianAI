@@ -552,5 +552,28 @@ def export_audit(conn: sqlite3.Connection, limit: int = None,
     return str(path)
 
 
+def backup_database(conn: sqlite3.Connection, out_dir: str = None) -> str:
+    """Write a consistent VACUUM INTO snapshot and return its path.
+
+    Same-second backups never overwrite each other: audit-..._2.db,
+    audit-..._3.db, ... . The audit-*.db rotation keeps the latest 10.
+    """
+    from datetime import datetime
+    from pathlib import Path
+
+    directory = Path(out_dir) if out_dir else data_dir() / "backups"
+    directory.mkdir(parents=True, exist_ok=True)
+    stamp = f"{datetime.now():%Y%m%d-%H%M%S}"
+    path = directory / f"audit-{stamp}.db"
+    suffix = 2
+    while path.exists():
+        path = directory / f"audit-{stamp}_{suffix}.db"
+        suffix += 1
+    conn.execute("VACUUM INTO ?", (str(path),))
+    for old in sorted(directory.glob("audit-*.db"))[:-10]:
+        old.unlink()
+    return str(path)
+
+
 __all__ = ["init_database", "audit_log", "record_tasks", "export_audit",
-           "verify_audit_chain", "DB_PATH"]
+           "backup_database", "verify_audit_chain", "DB_PATH"]

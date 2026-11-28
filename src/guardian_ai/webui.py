@@ -25,7 +25,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from guardian_ai.compliance import redact
 from guardian_ai.db import (init_database, audit_log, export_audit,
-                            record_tasks, verify_audit_chain)
+                            backup_database, record_tasks, verify_audit_chain)
 from guardian_ai.executor import Executor
 from guardian_ai.router import Router
 
@@ -928,18 +928,7 @@ class _Handler(BaseHTTPRequestHandler):
                 conn = _conn()
                 try:
                     broken = not verify_audit_chain(conn).get("ok")
-                    from guardian_ai.paths import data_dir
-                    from datetime import datetime
-                    dst = (data_dir() / "backups" /
-                           f"audit-{datetime.now():%Y%m%d-%H%M%S}.db")
-                    dst.parent.mkdir(parents=True, exist_ok=True)
-                    conn.execute("VACUUM INTO ?", (str(dst),))
-                    # same rotation as the CLI - an unbounded backups
-                    # folder would repeat the audit-growth problem it
-                    # was meant to solve.
-                    snaps = sorted(dst.parent.glob("audit-*.db"))
-                    for old in snaps[:-10]:
-                        old.unlink()
+                    dst = backup_database(conn)
                 finally:
                     _release(conn)
                 self._send(200, json.dumps(
