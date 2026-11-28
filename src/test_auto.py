@@ -384,6 +384,32 @@ def test():
     assert not os.path.exists(backup_path2)
 """ + FOOTER,
 
+    "config_perm": HEADER + """
+def test():
+    import importlib, json, stat, tempfile
+    td = tempfile.mkdtemp()
+    os.environ['GUARDIANAI_DATA_DIR'] = td
+    import main
+    importlib.reload(main)
+
+    cfg_path = os.path.join(td, 'config.json')
+    backup_path = os.path.join(td, 'config.json.backup')
+    with open(cfg_path, 'wb') as f:
+        f.write(b'{not json')
+    if os.name != 'nt':
+        os.chmod(cfg_path, 0o644)
+    main._write_config(lang='ja')
+    if os.name != 'nt':
+        assert stat.S_IMODE(os.stat(cfg_path).st_mode) == 0o600
+        assert stat.S_IMODE(os.stat(backup_path).st_mode) == 0o600
+
+        os.chmod(cfg_path, 0o644)
+        main._write_config(lang='en')
+        with open(cfg_path, encoding='utf-8') as f:
+            assert json.load(f)['lang'] == 'en'
+        assert stat.S_IMODE(os.stat(cfg_path).st_mode) == 0o600
+""" + FOOTER,
+
     "kms": HEADER + """
 def test():
     import tempfile

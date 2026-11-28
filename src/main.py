@@ -224,13 +224,23 @@ def _write_config(**kv) -> None:
         try:
             if cfg_path.exists():
                 import shutil
-                shutil.copyfile(
-                    cfg_path, cfg_path.parent / "config.json.backup")
+                backup_path = cfg_path.parent / "config.json.backup"
+                shutil.copyfile(cfg_path, backup_path)
+                if os.name != "nt":
+                    try:
+                        os.chmod(backup_path, 0o600)
+                    except Exception:
+                        pass
         except Exception:
             pass
     cfg.update(kv)
     cfg_path.write_text(
         _json.dumps(cfg, ensure_ascii=False, indent=2), "utf-8")
+    if os.name != "nt":
+        try:
+            os.chmod(cfg_path, 0o600)
+        except Exception:
+            pass
 
 
 def _is_no_network() -> bool:
