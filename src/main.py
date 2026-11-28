@@ -937,6 +937,19 @@ def main() -> None:
         print(_t(lang, "goodbye"))
 
 
+def _preserve_previous_crash(crash_path) -> bool:
+    """Keep one raw copy of the previous crash log before overwriting it."""
+    try:
+        if not crash_path.exists() or crash_path.stat().st_size == 0:
+            return False
+        import shutil
+        shutil.copyfile(crash_path,
+                        crash_path.with_name(crash_path.name + ".backup"))
+        return True
+    except Exception:
+        return False
+
+
 if __name__ == "__main__":
     try:
         main()
@@ -947,6 +960,7 @@ if __name__ == "__main__":
         try:
             from guardian_ai.paths import data_dir
             crash = data_dir() / "crash.log"
+            _preserve_previous_crash(crash)
             crash.write_text(traceback.format_exc(),
                              encoding="utf-8")
             print(f"\nGuardianAI stopped unexpectedly - details were "

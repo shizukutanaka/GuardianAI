@@ -370,6 +370,35 @@ def test():
     assert 'encoding="utf-8", errors="replace")[-1500:]' in src
 """ + FOOTER,
 
+    "crash_backup": HEADER + """
+def test():
+    import tempfile
+    from pathlib import Path
+    import main as cli_main
+    with tempfile.TemporaryDirectory() as td:
+        crash = Path(td) / 'crash.log'
+        backup = crash.with_name(crash.name + '.backup')
+
+        assert cli_main._preserve_previous_crash(crash) is False
+        assert not backup.exists()
+
+        crash.write_bytes(b'')
+        assert cli_main._preserve_previous_crash(crash) is False
+        assert not backup.exists()
+
+        original = (b'first traceback' + bytes([10, 0, 0xff, 0xfe, 10])
+                    + b'final line' + bytes([10]))
+        crash.write_bytes(original)
+        assert cli_main._preserve_previous_crash(crash) is True
+        assert backup.read_bytes() == original
+        assert crash.read_bytes() == original
+
+        second = b'second traceback\\n'
+        crash.write_bytes(second)
+        assert cli_main._preserve_previous_crash(crash) is True
+        assert backup.read_bytes() == second
+""" + FOOTER,
+
     "webui": HEADER + """
 import json, tempfile, threading, urllib.request, os
 def test():
