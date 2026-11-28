@@ -216,6 +216,34 @@ def test():
         conn.close()
 """ + FOOTER,
 
+    "export_collision": HEADER + """
+def test():
+    import json, os, tempfile
+    from guardian_ai.db import init_database, audit_log, export_audit
+    from guardian_ai.encryption import Encryption
+    with tempfile.TemporaryDirectory() as td:
+        conn = init_database(os.path.join(td, 't.db'))
+        audit_log(conn, 'general', 'collision first', 'result one')
+        first = export_audit(conn, out_dir=td)
+        audit_log(conn, 'general', 'collision second', 'result two')
+        second = export_audit(conn, out_dir=td)
+        assert first != second
+        assert os.path.exists(first)
+        assert os.path.exists(second)
+
+        enc = Encryption()
+        def load(path):
+            raw = open(path, encoding='utf-8').read()
+            return json.loads(enc.decrypt(raw))
+        first_payload = load(first)
+        second_payload = load(second)
+        first_requests = [e['request'] for e in first_payload['entries']]
+        second_requests = [e['request'] for e in second_payload['entries']]
+        assert first_requests == ['collision first']
+        assert second_requests == ['collision second', 'collision first']
+        conn.close()
+""" + FOOTER,
+
     "compliance": HEADER + """
 def test():
     from guardian_ai.compliance import check_compliance, audit_integrity

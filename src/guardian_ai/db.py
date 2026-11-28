@@ -538,7 +538,12 @@ def export_audit(conn: sqlite3.Connection, limit: int = None,
     blob = Encryption().encrypt(payload)
 
     directory = Path(out_dir) if out_dir else Path(DB_PATH).parent
-    path = directory / f"audit_export_{datetime.now():%Y%m%d_%H%M%S}.enc"
+    stamp = f"{datetime.now():%Y%m%d_%H%M%S}"
+    path = directory / f"audit_export_{stamp}.enc"
+    suffix = 2
+    while path.exists():
+        path = directory / f"audit_export_{stamp}_{suffix}.enc"
+        suffix += 1
     path.write_text(blob, encoding="utf-8")
     # keep only the latest 10 exports - an unbounded folder would repeat
     # the audit-growth problem it was meant to solve.
