@@ -286,6 +286,27 @@ def test():
         conn.close()
 """ + FOOTER,
 
+    "db_perm": HEADER + """
+def test():
+    import os, tempfile
+    from guardian_ai.db import init_database, audit_log
+    with tempfile.TemporaryDirectory() as td:
+        db_path = os.path.join(td, 't.db')
+        conn = init_database(db_path)
+        audit_log(conn, 'general', 'db permission check', 'result')
+        if os.name != 'nt':
+            mode = os.stat(db_path).st_mode & 0o777
+            assert mode == 0o600, oct(mode)
+        conn.close()
+
+        if os.name != 'nt':
+            os.chmod(db_path, 0o644)
+            conn = init_database(db_path)
+            mode = os.stat(db_path).st_mode & 0o777
+            assert mode == 0o600, oct(mode)
+            conn.close()
+""" + FOOTER,
+
     "compliance": HEADER + """
 def test():
     from guardian_ai.compliance import check_compliance, audit_integrity
