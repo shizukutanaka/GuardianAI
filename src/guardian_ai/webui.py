@@ -86,6 +86,11 @@ def _log_error(msg: str) -> None:
             lines = log.read_text(encoding="utf-8", errors="replace").splitlines()[-199:]
         lines.append(f"{datetime.now():%Y-%m-%d %H:%M:%S} {msg}")
         log.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        if os.name != "nt":
+            try:
+                os.chmod(log, 0o600)
+            except Exception:
+                pass
     except Exception:
         pass  # logging must never break the request path
 
