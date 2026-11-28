@@ -216,6 +216,22 @@ def test():
         conn.close()
 """ + FOOTER,
 
+    "export_perm": HEADER + """
+def test():
+    import os, tempfile
+    from guardian_ai.db import init_database, audit_log, export_audit
+    if os.name == 'nt':
+        return
+    with tempfile.TemporaryDirectory() as td:
+        conn = init_database(os.path.join(td, 't.db'))
+        audit_log(conn, 'general', 'export permission check', 'result')
+        path = export_audit(conn, out_dir=td)
+        assert os.path.exists(path)
+        mode = os.stat(path).st_mode & 0o777
+        assert mode == 0o600, oct(mode)
+        conn.close()
+""" + FOOTER,
+
     "export_collision": HEADER + """
 def test():
     import json, os, tempfile
