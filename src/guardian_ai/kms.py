@@ -92,7 +92,13 @@ def _read_key_file(path: Path) -> Optional[bytes]:
 
 
 def _write_key_file(path: Path, key: bytes) -> None:
-    _key_dir().mkdir(parents=True, exist_ok=True)
+    key_dir = _key_dir()
+    key_dir.mkdir(parents=True, exist_ok=True)
+    if os.name != "nt":
+        try:
+            os.chmod(key_dir, 0o700)
+        except OSError:
+            pass
     blob = _dpapi(key, protect=True) if os.name == "nt" else key
     path.write_bytes(blob)
     if os.name != "nt":
