@@ -490,6 +490,39 @@ def test():
         assert backup.read_bytes() == second
 """ + FOOTER,
 
+    "crash_perm": HEADER + """
+def test():
+    import os, tempfile
+    from pathlib import Path
+    import main as cli_main
+    with tempfile.TemporaryDirectory() as td:
+        crash = Path(td) / 'crash.log'
+        text = 'traceback with user data\\nfinal line\\n'
+        cli_main._write_crash_log(crash, text)
+        assert crash.read_text(encoding='utf-8') == text
+        if os.name != 'nt':
+            mode = os.stat(crash).st_mode & 0o777
+            assert mode == 0o600, oct(mode)
+
+        if os.name != 'nt':
+            os.chmod(crash, 0o644)
+            rewritten = 'replacement traceback\\n'
+            cli_main._write_crash_log(crash, rewritten)
+            assert crash.read_text(encoding='utf-8') == rewritten
+            mode = os.stat(crash).st_mode & 0o777
+            assert mode == 0o600, oct(mode)
+
+        original = (b'first traceback' + bytes([10, 0, 0xff, 0xfe, 10])
+                    + b'final line' + bytes([10]))
+        crash.write_bytes(original)
+        backup = crash.with_name(crash.name + '.backup')
+        assert cli_main._preserve_previous_crash(crash) is True
+        assert backup.read_bytes() == original
+        if os.name != 'nt':
+            mode = os.stat(backup).st_mode & 0o777
+            assert mode == 0o600, oct(mode)
+""" + FOOTER,
+
     "webui": HEADER + """
 import json, tempfile, threading, urllib.request, os
 def test():
