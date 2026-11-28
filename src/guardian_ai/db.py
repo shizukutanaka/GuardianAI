@@ -146,6 +146,12 @@ def init_database(db_path: str = DB_PATH) -> sqlite3.Connection:
     conn.commit()
 
     conn.commit()
+    if os.name != "nt":
+        try:
+            if os.path.exists(db_path):
+                os.chmod(db_path, 0o600)
+        except OSError:
+            pass
     return conn
 
 
