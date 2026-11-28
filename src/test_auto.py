@@ -586,6 +586,24 @@ def test():
             assert stat.S_IMODE(url_file.stat().st_mode) == 0o600
 """ + FOOTER,
 
+    "webui_log_perm": HEADER + """
+def test():
+    import stat, tempfile
+    from pathlib import Path
+    from guardian_ai.webui import _log_error
+    with tempfile.TemporaryDirectory() as td:
+        os.environ['GUARDIANAI_DATA_DIR'] = td
+        log = Path(td) / 'webui-errors.log'
+        _log_error('webui log permission check')
+        assert 'webui log permission check' in log.read_text(encoding='utf-8')
+        if os.name != 'nt':
+            assert stat.S_IMODE(log.stat().st_mode) == 0o600
+            os.chmod(log, 0o644)
+            _log_error('webui log permission rewrite')
+            assert 'webui log permission rewrite' in log.read_text(encoding='utf-8')
+            assert stat.S_IMODE(log.stat().st_mode) == 0o600
+""" + FOOTER,
+
     "naming": HEADER + """
 import os, sys, tempfile
 from pathlib import Path
