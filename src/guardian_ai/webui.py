@@ -1031,6 +1031,12 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(500, json.dumps({"error": str(e)}))
 
 
+def _write_ui_url(url_file, url: str) -> None:
+    url_file.write_text(url, encoding="utf-8")
+    if os.name != "nt":
+        os.chmod(url_file, 0o600)
+
+
 def serve(port: int = PORT, open_browser: bool = True,
           lang: str = None) -> None:
     """Start the local UI server. Binds 127.0.0.1 only - nothing
@@ -1077,7 +1083,7 @@ def serve(port: int = PORT, open_browser: bool = True,
     try:
         from guardian_ai.paths import data_dir
         url_file = data_dir() / "ui_url.txt"
-        url_file.write_text(url, encoding="utf-8")
+        _write_ui_url(url_file, url)
     except Exception:
         url_file = None
     print(f"GuardianAI UI: {url}  (Ctrl+C to stop)")

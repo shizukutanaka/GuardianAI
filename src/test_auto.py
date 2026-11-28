@@ -500,6 +500,23 @@ def test():
     srv.shutdown()
 """ + FOOTER,
 
+    "ui_url_perm": HEADER + """
+def test():
+    import stat, tempfile
+    from pathlib import Path
+    from guardian_ai.webui import _write_ui_url
+    with tempfile.TemporaryDirectory() as td:
+        url_file = Path(td) / 'ui_url.txt'
+        url_file.write_text('stale', encoding='utf-8')
+        if os.name != 'nt':
+            os.chmod(url_file, 0o644)
+        url = 'http://127.0.0.1:8765/?t=test-token&lang=ja'
+        _write_ui_url(url_file, url)
+        assert url_file.read_text(encoding='utf-8') == url
+        if os.name != 'nt':
+            assert stat.S_IMODE(url_file.stat().st_mode) == 0o600
+""" + FOOTER,
+
     "naming": HEADER + """
 import os, sys, tempfile
 from pathlib import Path
