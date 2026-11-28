@@ -552,6 +552,8 @@ def export_audit(conn: sqlite3.Connection, limit: int = None,
         path = directory / f"audit_export_{stamp}_{suffix}.enc"
         suffix += 1
     path.write_text(blob, encoding="utf-8")
+    if os.name != "nt":
+        os.chmod(path, 0o600)
     # keep only the latest 10 exports - an unbounded folder would repeat
     # the audit-growth problem it was meant to solve.
     for old in sorted(directory.glob("audit_export_*.enc"))[:-10]:
