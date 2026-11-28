@@ -271,6 +271,21 @@ def test():
         conn.close()
 """ + FOOTER,
 
+    "backup_perm": HEADER + """
+def test():
+    import os, tempfile
+    from guardian_ai.db import init_database, audit_log, backup_database
+    with tempfile.TemporaryDirectory() as td:
+        conn = init_database(os.path.join(td, 't.db'))
+        audit_log(conn, 'general', 'backup permission check', 'result')
+        path = backup_database(conn, out_dir=td)
+        assert os.path.exists(path)
+        if os.name != 'nt':
+            mode = os.stat(path).st_mode & 0o777
+            assert mode == 0o600, oct(mode)
+        conn.close()
+""" + FOOTER,
+
     "compliance": HEADER + """
 def test():
     from guardian_ai.compliance import check_compliance, audit_integrity
