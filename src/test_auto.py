@@ -459,6 +459,39 @@ def test():
                 os.environ[k] = v
 """ + FOOTER,
 
+    "key_dir_perm": HEADER + """
+import stat, tempfile
+from pathlib import Path
+def test():
+    if os.name == 'nt':
+        return
+    keys = ('GUARDIANAI_DATA_DIR', 'SHIELDAI_DATA_DIR')
+    saved = {k: os.environ.pop(k, None) for k in keys}
+    try:
+        from guardian_ai import kms
+        with tempfile.TemporaryDirectory() as td:
+            os.environ['GUARDIANAI_DATA_DIR'] = td
+            key_dir = Path(td) / '.shield_keys'
+            key_path = key_dir / 'svc.key'
+            kms._write_key_file(key_path, b'A' * 32)
+            mode = stat.S_IMODE(key_dir.stat().st_mode)
+            assert mode == 0o700, oct(mode)
+            mode = stat.S_IMODE(key_path.stat().st_mode)
+            assert mode == 0o600, oct(mode)
+
+            os.chmod(key_dir, 0o755)
+            kms._write_key_file(key_path, b'B' * 32)
+            mode = stat.S_IMODE(key_dir.stat().st_mode)
+            assert mode == 0o700, oct(mode)
+            mode = stat.S_IMODE(key_path.stat().st_mode)
+            assert mode == 0o600, oct(mode)
+    finally:
+        os.environ.pop('GUARDIANAI_DATA_DIR', None)
+        for k, v in saved.items():
+            if v is not None:
+                os.environ[k] = v
+""" + FOOTER,
+
     "webui_error_log": HEADER + """
 def test():
     import tempfile
