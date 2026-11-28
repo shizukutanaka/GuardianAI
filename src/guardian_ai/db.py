@@ -1,6 +1,7 @@
 """GuardianAI Database - SQLite schema and initialization"""
 import hashlib
 import hmac
+import os
 import sqlite3
 import threading
 
@@ -570,6 +571,8 @@ def backup_database(conn: sqlite3.Connection, out_dir: str = None) -> str:
         path = directory / f"audit-{stamp}_{suffix}.db"
         suffix += 1
     conn.execute("VACUUM INTO ?", (str(path),))
+    if os.name != "nt":
+        os.chmod(path, 0o600)
     for old in sorted(directory.glob("audit-*.db"))[:-10]:
         old.unlink()
     return str(path)
