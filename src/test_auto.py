@@ -604,6 +604,48 @@ def test():
             assert stat.S_IMODE(log.stat().st_mode) == 0o600
 """ + FOOTER,
 
+    "data_dir_perm": HEADER + """
+import stat, tempfile
+def test():
+    import os
+    from pathlib import Path
+    from guardian_ai.paths import data_dir
+    keys = ('GUARDIANAI_DATA_DIR', 'SHIELDAI_DATA_DIR')
+    saved = {k: os.environ.pop(k, None) for k in keys}
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            # fresh dedicated dir created by data_dir() must be 0o700
+            fresh = os.path.join(td, 'fresh-dir')
+            os.environ['GUARDIANAI_DATA_DIR'] = fresh
+            d = data_dir()
+            assert d == Path(fresh) and d.is_dir()
+            if os.name != 'nt':
+                assert stat.S_IMODE(d.stat().st_mode) == 0o700, oct(stat.S_IMODE(d.stat().st_mode))
+
+            # pre-existing loose dir must tighten to 0o700
+            loose = os.path.join(td, 'loose-dir')
+            os.mkdir(loose)
+            if os.name != 'nt':
+                os.chmod(loose, 0o755)
+            os.environ['GUARDIANAI_DATA_DIR'] = loose
+            d2 = data_dir()
+            if os.name != 'nt':
+                assert stat.S_IMODE(d2.stat().st_mode) == 0o700, oct(stat.S_IMODE(d2.stat().st_mode))
+
+            # source-tree form (no override): package dir mode untouched
+            os.environ.pop('GUARDIANAI_DATA_DIR', None)
+            pkg = Path(__import__('guardian_ai.paths', fromlist=['x']).__file__).resolve().parent
+            before = pkg.stat().st_mode
+            d3 = data_dir()
+            assert d3 == pkg
+            assert pkg.stat().st_mode == before
+    finally:
+        os.environ.pop('GUARDIANAI_DATA_DIR', None)
+        for k, v in saved.items():
+            if v is not None:
+                os.environ[k] = v
+""" + FOOTER,
+
     "naming": HEADER + """
 import os, sys, tempfile
 from pathlib import Path

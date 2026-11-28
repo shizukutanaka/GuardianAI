@@ -34,6 +34,7 @@ def _prefer_existing(current: Path, legacy: Path) -> Path:
 
 def data_dir() -> Path:
     override = env("DATA_DIR")
+    dedicated = True
     if override:
         d = Path(override)
     elif getattr(sys, "frozen", False):
@@ -43,10 +44,19 @@ def data_dir() -> Path:
         here = Path(__file__).resolve().parent
         if here.is_dir():           # normal source tree
             d = here
+            dedicated = False
         else:                       # inside a zipapp: __file__ is not a real dir
             d = _prefer_existing(Path.home() / ".guardianai",
                                  Path.home() / ".shieldai")
     d.mkdir(parents=True, exist_ok=True)
+    if dedicated and os.name != "nt":
+        # Dedicated data dir holds keys/DB/audit chain - owner-only.
+        # Applied on every call so pre-existing loose dirs tighten too.
+        # Never applied to a source tree (the package dir itself).
+        try:
+            os.chmod(d, 0o700)
+        except OSError:
+            pass
     return d
 
 
